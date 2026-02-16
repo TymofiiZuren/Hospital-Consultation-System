@@ -4,13 +4,15 @@ package ie.setu.hcs.dao.interfaces;
 // importing stuff
 import ie.setu.hcs.model.*;
 import ie.setu.hcs.dao.Dao;
+
+import javax.swing.table.DefaultTableModel;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
 // defining MedicalRecordDAO interface with generic Dao
 public interface MedicalRecordDAO extends Dao<MedicalRecord> {
     // creating findByPatientId method
-    ArrayList<MedicalRecord> findByPatientId(Integer patientId) throws SQLException;
+    DefaultTableModel findByPatientId(Integer patientId) throws SQLException;
     // creating findByConsultationId method
-    ArrayList<MedicalRecord> findByConsultationId(Integer consultationId) throws SQLException;
+    DefaultTableModel findByConsultationId(Integer consultationId) throws SQLException;
 }

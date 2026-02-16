@@ -9,9 +9,6 @@ import ie.setu.hcs.util.TableModelUtil;
 
 import javax.swing.table.DefaultTableModel;
 import java.sql.*;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 // Implementing AppointmentDAOImpl with implementation of AppointmentDAO
 public class AppointmentDAOImpl implements AppointmentDAO {
@@ -80,8 +77,6 @@ public class AppointmentDAOImpl implements AppointmentDAO {
     public DefaultTableModel findAll() throws SQLException {
         // creating sql variable with sql statement
         String sql = "SELECT * FROM appointments";
-        // creating model to store in swing
-        DefaultTableModel model = new DefaultTableModel();
 
         // validate connection
         // setting up connection with database
@@ -111,7 +106,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         WHERE patient_id = ?
           AND appointment_datetime >= NOW()
           AND status IN ('Pending', 'Accepted')
-        ORDER BY appointment_datetime ASC
+        ORDER BY appointment_datetime
         """;
 
         // validate connection

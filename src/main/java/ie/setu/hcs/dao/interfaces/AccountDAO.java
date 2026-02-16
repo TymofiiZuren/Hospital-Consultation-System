@@ -4,6 +4,8 @@ package ie.setu.hcs.dao.interfaces;
 // importing stuff
 import ie.setu.hcs.model.*;
 import ie.setu.hcs.dao.Dao;
+
+import javax.swing.table.DefaultTableModel;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -14,7 +16,7 @@ public interface AccountDAO extends Dao<Account> {
     // creating existsByEmail method
     Boolean existsByEmail(String email) throws SQLException;
     // creating findByRoleId method
-    ArrayList<Account> findByRoleId(Integer roleId) throws SQLException;
+    DefaultTableModel findByRoleId(Integer roleId) throws SQLException;
     // creating deactivate method
     void deactivate(Integer accountId) throws SQLException;
 }

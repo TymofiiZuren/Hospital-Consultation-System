@@ -4,13 +4,15 @@ package ie.setu.hcs.dao.interfaces;
 // importing stuff
 import ie.setu.hcs.model.*;
 import ie.setu.hcs.dao.Dao;
+
+import javax.swing.table.DefaultTableModel;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
 // defining LabResultDAO interface extending generic Dao
 public interface LabResultDAO extends Dao<LabResult>{
     // creating findByConsultationId method
-    ArrayList<LabResult> findByConsultationId(Integer consultationId) throws SQLException;
+    DefaultTableModel findByConsultationId(Integer consultationId) throws SQLException;
     // creating findByTechnicianId method
-    ArrayList<LabResult> findByTechnicianId(Integer technicianId) throws SQLException;
+    DefaultTableModel findByTechnicianId(Integer technicianId) throws SQLException;
 }
