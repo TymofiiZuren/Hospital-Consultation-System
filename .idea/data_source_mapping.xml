@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/AccountDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/AdministratorDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/AppointmentDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/ConsultationDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/DoctorDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/InsuranceDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/InvoiceDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/LabResultDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+    <file url="file://$PROJECT_DIR$/src/main/java/ie/setu/hcs/dao/impl/LabTechnicianDAOImpl.java" value="cd06c9e1-8a2b-478f-b441-1e6c0fd14aa7" />
+  </component>
+</project>
