@@ -17,8 +17,8 @@ public class LabResultDAOImpl implements LabResultDAO {
     public void save(LabResult labResult) throws SQLException {
         // creating sql variable with sql statement
         String sql = """
-                INSERT INTO lab_results (consultation_id, technician_id, test_type, result, uploaded_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO lab_results (consultation_id, appointment_id, technician_id, test_type, result, uploaded_at)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
         // validating connection
@@ -26,12 +26,22 @@ public class LabResultDAOImpl implements LabResultDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ensureAppointmentIdColumn(conn);
             // inserting arguments into the query statement
-            pstmt.setInt(1, labResult.getConsultationId());
-            pstmt.setInt(2, labResult.getTechnicianId());
-            pstmt.setString(3, labResult.getTestType());
-            pstmt.setString(4, labResult.getResult());
-            pstmt.setTimestamp(5, Timestamp.valueOf(labResult.getUploadedAt()));
+            if (labResult.getConsultationId() == null) {
+                pstmt.setNull(1, Types.INTEGER);
+            } else {
+                pstmt.setInt(1, labResult.getConsultationId());
+            }
+            if (labResult.getAppointmentId() == null) {
+                pstmt.setNull(2, Types.INTEGER);
+            } else {
+                pstmt.setInt(2, labResult.getAppointmentId());
+            }
+            pstmt.setInt(3, labResult.getTechnicianId());
+            pstmt.setString(4, labResult.getTestType());
+            pstmt.setString(5, labResult.getResult());
+            pstmt.setTimestamp(6, Timestamp.valueOf(labResult.getUploadedAt()));
 
             // executing the query in the database
             pstmt.executeUpdate();
@@ -57,6 +67,7 @@ public class LabResultDAOImpl implements LabResultDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureAppointmentIdColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -87,6 +98,7 @@ public class LabResultDAOImpl implements LabResultDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
+            ensureAppointmentIdColumn(conn);
 
             // returning the model from query
             return TableModelUtil.buildTableModel(rs);
@@ -99,6 +111,7 @@ public class LabResultDAOImpl implements LabResultDAO {
         // creating sql variable with sql statement
         String sql = """
                 UPDATE lab_results SET consultation_id = ?,
+                                       appointment_id = ?,
                                        technician_id = ?,
                                        test_type = ?,
                                        result = ?,
@@ -111,13 +124,23 @@ public class LabResultDAOImpl implements LabResultDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureAppointmentIdColumn(conn);
             // inserting arguments into the query statement
-            pstmt.setInt(1, labResult.getConsultationId());
-            pstmt.setInt(2, labResult.getTechnicianId());
-            pstmt.setString(3, labResult.getTestType());
-            pstmt.setString(4, labResult.getResult());
-            pstmt.setTimestamp(5, Timestamp.valueOf(labResult.getUploadedAt()));
-            pstmt.setInt(6, labResult.getLabResultId());
+            if (labResult.getConsultationId() == null) {
+                pstmt.setNull(1, Types.INTEGER);
+            } else {
+                pstmt.setInt(1, labResult.getConsultationId());
+            }
+            if (labResult.getAppointmentId() == null) {
+                pstmt.setNull(2, Types.INTEGER);
+            } else {
+                pstmt.setInt(2, labResult.getAppointmentId());
+            }
+            pstmt.setInt(3, labResult.getTechnicianId());
+            pstmt.setString(4, labResult.getTestType());
+            pstmt.setString(5, labResult.getResult());
+            pstmt.setTimestamp(6, Timestamp.valueOf(labResult.getUploadedAt()));
+            pstmt.setInt(7, labResult.getLabResultId());
 
             // execute the query
             pstmt.executeUpdate();
@@ -154,6 +177,7 @@ public class LabResultDAOImpl implements LabResultDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ensureAppointmentIdColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, consultationId);
@@ -177,6 +201,7 @@ public class LabResultDAOImpl implements LabResultDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ensureAppointmentIdColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, technicianId);
@@ -201,8 +226,12 @@ public class LabResultDAOImpl implements LabResultDAO {
                 rs.getInt("lab_result_id"));
 
         // mapping consultation id to an object
-        labResult.setConsultationId(
-                rs.getInt("consultation_id"));
+        int consultationId = rs.getInt("consultation_id");
+        labResult.setConsultationId(rs.wasNull() ? null : consultationId);
+
+        // mapping appointment id to an object
+        int appointmentId = rs.getInt("appointment_id");
+        labResult.setAppointmentId(rs.wasNull() ? null : appointmentId);
 
         // mapping technician id to an object
         labResult.setTechnicianId(
@@ -229,5 +258,25 @@ public class LabResultDAOImpl implements LabResultDAO {
 
         // returning the lab result information
         return labResult;
+    }
+
+    private void ensureAppointmentIdColumn(Connection conn) throws SQLException {
+        if (hasColumn(conn, "appointment_id")) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE lab_results ADD COLUMN appointment_id INT NULL");
+        } catch (SQLException ex) {
+            if (!hasColumn(conn, "appointment_id")) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String columnName) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "lab_results", columnName)) {
+            return columns.next();
+        }
     }
 }
