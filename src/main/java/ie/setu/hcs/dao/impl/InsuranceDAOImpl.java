@@ -17,8 +17,8 @@ public class InsuranceDAOImpl implements InsuranceDAO {
     public void save(Insurance insurance) throws SQLException {
         // creating sql variable with sql statement
         String sql = """
-                INSERT INTO insurance (patient_id, provider_name, policy_number, status, expiration_date)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO insurance (patient_id, provider_name, policy_number, status, expiration_date, card_document_path)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
         // validating connection
@@ -26,12 +26,14 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ensureCardDocumentColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, insurance.getPatientId());
             pstmt.setString(2, insurance.getProviderName());
             pstmt.setString(3, insurance.getPolicyNum());
             pstmt.setString(4, insurance.getStatus());
             pstmt.setDate(5, Date.valueOf(insurance.getExpirationDate()));
+            pstmt.setString(6, insurance.getCardDocumentPath());
 
             // executing the query in the database
             pstmt.executeUpdate();
@@ -57,6 +59,7 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureCardDocumentColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -87,6 +90,7 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
+            ensureCardDocumentColumn(conn);
 
             // returning the model from query
             return TableModelUtil.buildTableModel(rs);
@@ -102,7 +106,8 @@ public class InsuranceDAOImpl implements InsuranceDAO {
                                       provider_name = ?,
                                       policy_number = ?,
                                       status = ?,
-                                      expiration_date = ?
+                                      expiration_date = ?,
+                                      card_document_path = ?
                               WHERE insurance_id = ?
                 """;
 
@@ -111,13 +116,15 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureCardDocumentColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, insurance.getPatientId());
             pstmt.setString(2, insurance.getProviderName());
             pstmt.setString(3, insurance.getPolicyNum());
             pstmt.setString(4, insurance.getStatus());
             pstmt.setDate(5, Date.valueOf(insurance.getExpirationDate()));
-            pstmt.setInt(6, insurance.getInsuranceId());
+            pstmt.setString(6, insurance.getCardDocumentPath());
+            pstmt.setInt(7, insurance.getInsuranceId());
 
             // execute the query
             pstmt.executeUpdate();
@@ -154,6 +161,7 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ensureCardDocumentColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, patientId);
@@ -177,6 +185,7 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureCardDocumentColumn(conn);
             // inserting arguments into the query statement
             pstmt.setString(1, status);
             pstmt.setInt(2, insuranceId);
@@ -207,7 +216,7 @@ public class InsuranceDAOImpl implements InsuranceDAO {
 
         // mapping policy number to an object
         insurance.setPolicyNum(
-                rs.getString("policy_num"));
+                rs.getString("policy_number"));
 
         // mapping status to an object
         insurance.setStatus(
@@ -223,7 +232,31 @@ public class InsuranceDAOImpl implements InsuranceDAO {
                     date.toLocalDate());
         }
 
+        // mapping card document path to an object
+        insurance.setCardDocumentPath(
+                rs.getString("card_document_path"));
+
         // returning the insurance information
         return insurance;
+    }
+
+    private void ensureCardDocumentColumn(Connection conn) throws SQLException {
+        if (hasColumn(conn, "card_document_path")) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE insurance ADD COLUMN card_document_path VARCHAR(500) NULL");
+        } catch (SQLException ex) {
+            if (!hasColumn(conn, "card_document_path")) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String columnName) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "insurance", columnName)) {
+            return columns.next();
+        }
     }
 }
