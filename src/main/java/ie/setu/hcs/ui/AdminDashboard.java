@@ -1,7 +1,6 @@
 package ie.setu.hcs.ui;
 
 import ie.setu.hcs.model.Account;
-import ie.setu.hcs.service.AdminService;
 import ie.setu.hcs.util.AppNavigator;
 import ie.setu.hcs.util.HCS_Colors;
 import ie.setu.hcs.util.RoundedPanel;
@@ -13,13 +12,14 @@ import java.awt.*;
 
 public class AdminDashboard extends JFrame {
     private final Account account;
-    private final AdminService adminService = new AdminService();
     private JPanel contentHost;
 
     private JButton btnHome;
     private JButton btnAccounts;
     private JButton btnPatients;
     private JButton btnDoctors;
+    private JButton btnAdministrators;
+    private JButton btnTechnicians;
     private JButton btnAppointments;
     private JButton btnConsultations;
     private JButton btnLabs;
@@ -104,6 +104,8 @@ public class AdminDashboard extends JFrame {
         btnAccounts = UIHelper.navButton("Accounts", false);
         btnPatients = UIHelper.navButton("Patients", false);
         btnDoctors = UIHelper.navButton("Doctors", false);
+        btnAdministrators = UIHelper.navButton("Admins", false);
+        btnTechnicians = UIHelper.navButton("Lab Staff", false);
         btnAppointments = UIHelper.navButton("Visits", false);
         btnConsultations = UIHelper.navButton("Consults", false);
         btnLabs = UIHelper.navButton("Lab Results", false);
@@ -114,6 +116,8 @@ public class AdminDashboard extends JFrame {
         btnAccounts.addActionListener(e -> showFrame(accountsFrame(), btnAccounts));
         btnPatients.addActionListener(e -> showFrame(patientsFrame(), btnPatients));
         btnDoctors.addActionListener(e -> showFrame(doctorsFrame(), btnDoctors));
+        btnAdministrators.addActionListener(e -> showFrame(administratorsFrame(), btnAdministrators));
+        btnTechnicians.addActionListener(e -> showFrame(labTechniciansFrame(), btnTechnicians));
         btnAppointments.addActionListener(e -> showFrame(new AppointmentFrame(account, AppointmentFrame.Mode.ADMIN), btnAppointments));
         btnConsultations.addActionListener(e -> showFrame(new ConsultationFrame(account, ConsultationFrame.Mode.ADMIN), btnConsultations));
         btnLabs.addActionListener(e -> showFrame(new LabResultsFrame(account, LabResultsFrame.Mode.ADMIN), btnLabs));
@@ -124,6 +128,8 @@ public class AdminDashboard extends JFrame {
         navGrid.add(btnAccounts);
         navGrid.add(btnPatients);
         navGrid.add(btnDoctors);
+        navGrid.add(btnAdministrators);
+        navGrid.add(btnTechnicians);
         navGrid.add(btnAppointments);
         navGrid.add(btnConsultations);
         navGrid.add(btnLabs);
@@ -195,17 +201,18 @@ public class AdminDashboard extends JFrame {
         stack.add(lower);
         stack.add(Box.createVerticalStrut(18));
 
-        JPanel cards = new JPanel(new GridLayout(3, 3, 18, 18));
+        JPanel cards = new JPanel(new GridLayout(0, 3, 18, 18));
         cards.setOpaque(false);
         cards.add(card("Accounts", "Update system users.", () -> showFrame(accountsFrame(), btnAccounts)));
         cards.add(card("Patients", "Open patient records.", () -> showFrame(patientsFrame(), btnPatients)));
         cards.add(card("Doctors", "Manage doctor profiles.", () -> showFrame(doctorsFrame(), btnDoctors)));
+        cards.add(card("Administrators", "Manage administrator staff.", () -> showFrame(administratorsFrame(), btnAdministrators)));
+        cards.add(card("Lab Technicians", "Manage lab staff profiles.", () -> showFrame(labTechniciansFrame(), btnTechnicians)));
         cards.add(card("Appointments", "Manage visits and rooms.", () -> showFrame(new AppointmentFrame(account, AppointmentFrame.Mode.ADMIN), btnAppointments)));
         cards.add(card("Consultations", "Review consult notes.", () -> showFrame(new ConsultationFrame(account, ConsultationFrame.Mode.ADMIN), btnConsultations)));
         cards.add(card("Lab Results", "Review lab results.", () -> showFrame(new LabResultsFrame(account, LabResultsFrame.Mode.ADMIN), btnLabs)));
         cards.add(card("Invoices", "Review invoices.", () -> showFrame(new InvoiceFrame(account, InvoiceFrame.Mode.ADMIN), btnInvoices)));
         cards.add(card("Insurance", "Review insurance.", () -> showFrame(new InsuranceFrame(account, InsuranceFrame.Mode.ADMIN), btnInsurance)));
-        cards.add(card("Staff", "View lab technicians.", () -> showFrame(staffFrame(), btnHome)));
         cards.setAlignmentX(Component.LEFT_ALIGNMENT);
         stack.add(cards);
 
@@ -282,10 +289,12 @@ public class AdminDashboard extends JFrame {
         return new AdminDoctorsFrame(account);
     }
 
-    private DataTableFrame staffFrame() {
-        return new DataTableFrame("Lab Technicians", "Registered laboratory staff", "technician_id", adminService::getTechnicians)
-                .addSelectedAction("Delete", HCS_Colors.ACCENT_RED, adminService::deleteTechnician)
-                .withBack(() -> new AdminDashboard(account));
+    private JFrame administratorsFrame() {
+        return new AdminAdministratorsFrame(account);
+    }
+
+    private JFrame labTechniciansFrame() {
+        return new AdminLabTechniciansFrame(account);
     }
 
     private JButton card(String title, String desc, Runnable action) {
@@ -313,6 +322,8 @@ public class AdminDashboard extends JFrame {
         UIHelper.setNavActive(btnAccounts, btnAccounts == activeButton);
         UIHelper.setNavActive(btnPatients, btnPatients == activeButton);
         UIHelper.setNavActive(btnDoctors, btnDoctors == activeButton);
+        UIHelper.setNavActive(btnAdministrators, btnAdministrators == activeButton);
+        UIHelper.setNavActive(btnTechnicians, btnTechnicians == activeButton);
         UIHelper.setNavActive(btnAppointments, btnAppointments == activeButton);
         UIHelper.setNavActive(btnConsultations, btnConsultations == activeButton);
         UIHelper.setNavActive(btnLabs, btnLabs == activeButton);

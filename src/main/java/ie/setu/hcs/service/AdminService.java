@@ -3,19 +3,22 @@ package ie.setu.hcs.service;
 import ie.setu.hcs.config.DatabaseConfig;
 import ie.setu.hcs.dao.impl.AccountDAOImpl;
 import ie.setu.hcs.dao.impl.AdministratorDAOImpl;
+import ie.setu.hcs.dao.impl.DepartmentDAOImpl;
 import ie.setu.hcs.dao.impl.DoctorDAOImpl;
 import ie.setu.hcs.dao.impl.LabTechnicianDAOImpl;
 import ie.setu.hcs.dao.impl.PatientDAOImpl;
 import ie.setu.hcs.dao.interfaces.AccountDAO;
 import ie.setu.hcs.dao.interfaces.AdministratorDAO;
-import ie.setu.hcs.dao.interfaces.DoctorDAO;
 import ie.setu.hcs.dao.interfaces.LabTechnicianDAO;
 import ie.setu.hcs.dao.interfaces.PatientDAO;
 import ie.setu.hcs.exception.ResourceNotFoundException;
 import ie.setu.hcs.exception.ValidationException;
 import ie.setu.hcs.model.Account;
+import ie.setu.hcs.model.Administrator;
 import ie.setu.hcs.model.Doctor;
+import ie.setu.hcs.model.LabTechnician;
 import ie.setu.hcs.model.Patient;
+import ie.setu.hcs.util.InputValidationUtil;
 import ie.setu.hcs.util.TableModelUtil;
 
 import javax.swing.table.DefaultTableModel;
@@ -23,13 +26,15 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.util.Map;
 
 public class AdminService {
     private final AccountDAO accountDAO = new AccountDAOImpl();
     private final PatientDAO patientDAO = new PatientDAOImpl();
-    private final DoctorDAO doctorDAO = new DoctorDAOImpl();
+    private final DoctorDAOImpl doctorDAO = new DoctorDAOImpl();
     private final LabTechnicianDAO technicianDAO = new LabTechnicianDAOImpl();
     private final AdministratorDAO administratorDAO = new AdministratorDAOImpl();
+    private final DepartmentDAOImpl departmentDAO = new DepartmentDAOImpl();
 
     public DefaultTableModel getAccounts() throws Exception {
         return accountDAO.findAll();
@@ -86,18 +91,21 @@ public class AdminService {
     }
 
     public DefaultTableModel getDoctorsForManagement() throws Exception {
+        doctorDAO.ensureEmployeeNumColumn();
         String sql = """
                 SELECT d.doctor_id,
                        CONCAT(a.first_name, ' ', a.last_name) AS doctor,
                        a.email,
+                       COALESCE(d.employee_num, '') AS employee_num,
                        d.specialization,
                        d.license_number,
                        d.years_of_experience,
                        d.consultation_fee,
-                       d.dep_id,
+                       COALESCE(dep.name, '') AS department,
                        a.is_active
                 FROM doctors d
                 JOIN accounts a ON d.account_id = a.account_id
+                LEFT JOIN departments dep ON d.dep_id = dep.dep_id
                 ORDER BY a.last_name, a.first_name
                 """;
         return displayTable(sql);
@@ -107,8 +115,43 @@ public class AdminService {
         return technicianDAO.findAll();
     }
 
+    public DefaultTableModel getTechniciansForManagement() throws Exception {
+        String sql = """
+                SELECT lt.technician_id,
+                       CONCAT(a.first_name, ' ', a.last_name) AS technician,
+                       a.email,
+                       lt.employee_num,
+                       lt.qualification,
+                       lt.lab_name,
+                       lt.shift,
+                       a.is_active
+                FROM lab_technicians lt
+                JOIN accounts a ON lt.account_id = a.account_id
+                ORDER BY a.last_name, a.first_name
+                """;
+        return displayTable(sql);
+    }
+
     public DefaultTableModel getAdministrators() throws Exception {
         return administratorDAO.findAll();
+    }
+
+    public DefaultTableModel getAdministratorsForManagement() throws Exception {
+        String sql = """
+                SELECT ad.admin_id,
+                       CONCAT(a.first_name, ' ', a.last_name) AS administrator,
+                       a.email,
+                       ad.job_title,
+                       ad.employee_num,
+                       COALESCE(dep.name, '') AS department,
+                       a.is_active,
+                       a.is_admin
+                FROM administrators ad
+                JOIN accounts a ON ad.account_id = a.account_id
+                LEFT JOIN departments dep ON ad.dep_id = dep.dep_id
+                ORDER BY a.last_name, a.first_name
+                """;
+        return displayTable(sql);
     }
 
     public void deactivateAccount(Integer accountId) throws Exception {
@@ -125,29 +168,19 @@ public class AdminService {
         return accountDAO.findById(accountId);
     }
 
-    public void updateAccount(Integer accountId, String email, Integer roleId, String firstName, String lastName,
+    public void updateAccount(Integer accountId, String email, String firstName, String lastName,
                               String ppsn, String phone, String gender, Boolean isActive, Boolean isAdmin) throws Exception {
         Account existing = requireAccount(accountId);
-        if (email == null || email.isBlank()) {
-            throw new ValidationException("Email is required.");
-        }
-        if (roleId == null) {
-            throw new ValidationException("Role is required.");
-        }
-        if (firstName == null || firstName.isBlank()) {
-            throw new ValidationException("First name is required.");
-        }
-        if (lastName == null || lastName.isBlank()) {
-            throw new ValidationException("Last name is required.");
-        }
+        String normalizedEmail = InputValidationUtil.requireEmail(email);
+        String normalizedFirstName = InputValidationUtil.requireNonBlank(firstName, "First name");
+        String normalizedLastName = InputValidationUtil.requireNonBlank(lastName, "Last name");
 
-        existing.setEmail(email.trim());
-        existing.setRoleId(roleId);
-        existing.setFirstName(firstName.trim());
-        existing.setLastName(lastName.trim());
-        existing.setPpsn(blankToNull(ppsn));
-        existing.setPhone(blankToNull(phone));
-        existing.setGender(blankToNull(gender));
+        existing.setEmail(normalizedEmail);
+        existing.setFirstName(normalizedFirstName);
+        existing.setLastName(normalizedLastName);
+        existing.setPpsn(blankToNull(InputValidationUtil.optionalTrim(ppsn)));
+        existing.setPhone(blankToNull(InputValidationUtil.optionalTrim(phone)));
+        existing.setGender(blankToNull(InputValidationUtil.optionalTrim(gender)));
         existing.setActive(Boolean.TRUE.equals(isActive));
         existing.setAdmin(Boolean.TRUE.equals(isAdmin));
         accountDAO.update(existing);
@@ -163,27 +196,11 @@ public class AdminService {
     public void updatePatient(Integer patientId, LocalDate dateOfBirth, String address, String eircode,
                               String bloodType, String medicalRecordNumber) throws Exception {
         Patient existing = requirePatient(patientId);
-        if (dateOfBirth == null) {
-            throw new ValidationException("Date of birth is required.");
-        }
-        if (address == null || address.isBlank()) {
-            throw new ValidationException("Address is required.");
-        }
-        if (eircode == null || eircode.isBlank()) {
-            throw new ValidationException("Eircode is required.");
-        }
-        if (bloodType == null || bloodType.isBlank()) {
-            throw new ValidationException("Blood type is required.");
-        }
-        if (medicalRecordNumber == null || medicalRecordNumber.isBlank()) {
-            throw new ValidationException("Medical record number is required.");
-        }
-
-        existing.setDateOfBirth(dateOfBirth);
-        existing.setAddress(address.trim());
-        existing.setEircode(eircode.trim());
-        existing.setBloodType(bloodType.trim());
-        existing.setMedicalRecordNum(medicalRecordNumber.trim());
+        existing.setDateOfBirth(InputValidationUtil.requireDate(dateOfBirth, "Date of birth"));
+        existing.setAddress(InputValidationUtil.requireNonBlank(address, "Address"));
+        existing.setEircode(InputValidationUtil.requireNonBlank(eircode, "Eircode"));
+        existing.setBloodType(InputValidationUtil.requireNonBlank(bloodType, "Blood type"));
+        existing.setMedicalRecordNum(InputValidationUtil.requireNonBlank(medicalRecordNumber, "Medical record number"));
         patientDAO.update(existing);
     }
 
@@ -194,31 +211,57 @@ public class AdminService {
         return doctorDAO.findById(doctorId);
     }
 
-    public void updateDoctor(Integer doctorId, String specialization, String licenseNumber,
-                             Integer yearsOfExperience, Integer consultationFee, Integer depId) throws Exception {
+    public void updateDoctor(Integer doctorId, String employeeNum, String specialization, String licenseNumber,
+                             Integer yearsOfExperience, Integer consultationFee, String departmentName) throws Exception {
         Doctor existing = requireDoctor(doctorId);
-        if (specialization == null || specialization.isBlank()) {
-            throw new ValidationException("Specialization is required.");
-        }
-        if (licenseNumber == null || licenseNumber.isBlank()) {
-            throw new ValidationException("License number is required.");
-        }
-        if (yearsOfExperience == null) {
-            throw new ValidationException("Years of experience is required.");
-        }
-        if (consultationFee == null) {
-            throw new ValidationException("Consultation fee is required.");
-        }
-        if (depId == null) {
-            throw new ValidationException("Department ID is required.");
-        }
-
-        existing.setSpecialization(specialization.trim());
-        existing.setLicenseNum(licenseNumber.trim());
-        existing.setYearsOfExperience(yearsOfExperience);
-        existing.setConsultationFee(consultationFee);
-        existing.setDepId(depId);
+        existing.setEmployeeNum(InputValidationUtil.requireNonBlank(employeeNum, "Employee number"));
+        existing.setSpecialization(InputValidationUtil.requireNonBlank(specialization, "Specialization"));
+        existing.setLicenseNum(InputValidationUtil.requireNonBlank(licenseNumber, "License number"));
+        existing.setYearsOfExperience(InputValidationUtil.requirePositiveInteger(yearsOfExperience, "Years of experience"));
+        existing.setConsultationFee(InputValidationUtil.requireNonNegativeInteger(consultationFee, "Consultation fee"));
+        Integer depId = departmentDAO.findByName(InputValidationUtil.requireNonBlank(departmentName, "Department"));
+        existing.setDepId(InputValidationUtil.requirePositiveInteger(depId, "Department"));
         doctorDAO.update(existing);
+    }
+
+    public Administrator findAdministratorById(Integer adminId) throws Exception {
+        if (adminId == null) {
+            return null;
+        }
+        return administratorDAO.findById(adminId);
+    }
+
+    public void updateAdministrator(Integer adminId, String jobTitle, String employeeNum, String departmentName) throws Exception {
+        Administrator existing = requireAdministrator(adminId);
+        existing.setJobTitle(InputValidationUtil.requireNonBlank(jobTitle, "Job title"));
+        existing.setEmployeeNum(InputValidationUtil.requireNonBlank(employeeNum, "Employee number"));
+        Integer depId = departmentDAO.findByName(InputValidationUtil.requireNonBlank(departmentName, "Department"));
+        existing.setDepId(InputValidationUtil.requirePositiveInteger(depId, "Department"));
+        administratorDAO.update(existing);
+    }
+
+    public LabTechnician findTechnicianById(Integer technicianId) throws Exception {
+        if (technicianId == null) {
+            return null;
+        }
+        return technicianDAO.findById(technicianId);
+    }
+
+    public void updateTechnician(Integer technicianId, String employeeNum, String qualification, String labName, String shift) throws Exception {
+        LabTechnician existing = requireTechnician(technicianId);
+        existing.setEmployeeNum(InputValidationUtil.requireNonBlank(employeeNum, "Employee number"));
+        existing.setQualification(InputValidationUtil.requireNonBlank(qualification, "Qualification"));
+        existing.setLabName(InputValidationUtil.requireNonBlank(labName, "Lab name"));
+        existing.setShift(InputValidationUtil.requireNonBlank(shift, "Shift"));
+        technicianDAO.update(existing);
+    }
+
+    public Map<Integer, String> getDepartments() throws Exception {
+        return departmentDAO.findAllDepartments();
+    }
+
+    public String getDepartmentName(Integer depId) throws Exception {
+        return departmentDAO.findNameById(depId);
     }
 
     public void deletePatient(Integer patientId) throws Exception {
@@ -310,6 +353,28 @@ public class AdminService {
             throw new ResourceNotFoundException("Doctor was not found.");
         }
         return doctor;
+    }
+
+    private Administrator requireAdministrator(Integer adminId) throws Exception {
+        if (adminId == null) {
+            throw new ValidationException("Please select an administrator first.");
+        }
+        Administrator administrator = administratorDAO.findById(adminId);
+        if (administrator == null) {
+            throw new ResourceNotFoundException("Administrator was not found.");
+        }
+        return administrator;
+    }
+
+    private LabTechnician requireTechnician(Integer technicianId) throws Exception {
+        if (technicianId == null) {
+            throw new ValidationException("Please select a lab technician first.");
+        }
+        LabTechnician technician = technicianDAO.findById(technicianId);
+        if (technician == null) {
+            throw new ResourceNotFoundException("Lab technician was not found.");
+        }
+        return technician;
     }
 
     private String blankToNull(String value) {

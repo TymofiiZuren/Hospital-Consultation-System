@@ -1,7 +1,7 @@
 package ie.setu.hcs.ui;
 
 import ie.setu.hcs.model.Account;
-import ie.setu.hcs.model.Patient;
+import ie.setu.hcs.model.LabTechnician;
 import ie.setu.hcs.service.AdminService;
 import ie.setu.hcs.util.AppNavigator;
 import ie.setu.hcs.util.HCS_Colors;
@@ -10,28 +10,40 @@ import ie.setu.hcs.util.UIHelper;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.LocalDate;
 
-public class AdminPatientsFrame extends JFrame {
+public class AdminLabTechniciansFrame extends JFrame {
+    private static final String[] LAB_OPTIONS = {
+            "Clinical Chemistry Lab",
+            "Hematology Lab",
+            "Microbiology Lab",
+            "Immunology Lab",
+            "Biochemistry Lab",
+            "Pathology Lab"
+    };
+    private static final String[] SHIFT_OPTIONS = {
+            "Morning (06:00-14:00)",
+            "Afternoon (14:00-22:00)",
+            "Night (22:00-06:00)"
+    };
+
     private final Account adminAccount;
     private final AdminService service = new AdminService();
 
     private final JTable table = UIHelper.table(new DefaultTableModel());
     private final JTextField txtAccount = new JTextField();
-    private final JTextField txtDateOfBirth = new JTextField();
-    private final JTextField txtAddress = new JTextField();
-    private final JTextField txtEircode = new JTextField();
-    private final JTextField txtBloodType = new JTextField();
-    private final JTextField txtMedicalRecordNumber = new JTextField();
+    private final JTextField txtEmployeeNum = new JTextField();
+    private final JTextField txtQualification = new JTextField();
+    private final JComboBox<String> cmbLabName = new JComboBox<>(LAB_OPTIONS);
+    private final JComboBox<String> cmbShift = new JComboBox<>(SHIFT_OPTIONS);
 
-    public AdminPatientsFrame(Account adminAccount) {
+    public AdminLabTechniciansFrame(Account adminAccount) {
         this.adminAccount = adminAccount;
         initUI();
         loadTable();
     }
 
     private void initUI() {
-        setTitle("Patients");
+        setTitle("Lab Technicians");
         setSize(980, 760);
         setMinimumSize(new Dimension(900, 680));
         setLocationRelativeTo(null);
@@ -39,7 +51,7 @@ public class AdminPatientsFrame extends JFrame {
 
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(HCS_Colors.LIGHT_BG);
-        root.add(UIHelper.pageHeader("Patients", "Review patient profiles and update the selected patient record"), BorderLayout.NORTH);
+        root.add(UIHelper.pageHeader("Lab Technicians", "Review lab staff profiles and update selected technician details"), BorderLayout.NORTH);
 
         JPanel content = UIHelper.pageBody(new BorderLayout(0, 16));
         content.setBackground(HCS_Colors.LIGHT_BG);
@@ -49,7 +61,7 @@ public class AdminPatientsFrame extends JFrame {
         page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
         page.add(createForm());
         page.add(Box.createVerticalStrut(18));
-        page.add(UIHelper.tableAlignedSection(UIHelper.tableSearchBar(table, "Search Patients")));
+        page.add(UIHelper.tableAlignedSection(UIHelper.tableSearchBar(table, "Search Lab Technicians")));
         page.add(Box.createVerticalStrut(12));
         page.add(UIHelper.tableScrollPane(table, 380));
         content.add(UIHelper.scrollablePage(page), BorderLayout.CENTER);
@@ -73,28 +85,26 @@ public class AdminPatientsFrame extends JFrame {
         int row = 0;
 
         UIHelper.styleField(txtAccount);
-        UIHelper.styleField(txtDateOfBirth);
-        UIHelper.styleField(txtAddress);
-        UIHelper.styleField(txtEircode);
-        UIHelper.styleField(txtBloodType);
-        UIHelper.styleField(txtMedicalRecordNumber);
+        UIHelper.styleField(txtEmployeeNum);
+        UIHelper.styleField(txtQualification);
+        UIHelper.styleCombo(cmbLabName);
+        UIHelper.styleCombo(cmbShift);
         txtAccount.setEditable(false);
 
         UIHelper.addFormRow(form, gbc, row++, "Account", txtAccount);
-        UIHelper.addFormRow(form, gbc, row++, "Date of Birth (YYYY-MM-DD)", txtDateOfBirth);
-        UIHelper.addFormRow(form, gbc, row++, "Address", txtAddress);
-        UIHelper.addFormRow(form, gbc, row++, "Eircode", txtEircode);
-        UIHelper.addFormRow(form, gbc, row++, "Blood Type", txtBloodType);
-        UIHelper.addFormRow(form, gbc, row, "Medical Record No.", txtMedicalRecordNumber);
+        UIHelper.addFormRow(form, gbc, row++, "Employee Number", txtEmployeeNum);
+        UIHelper.addFormRow(form, gbc, row++, "Qualification", txtQualification);
+        UIHelper.addFormRow(form, gbc, row++, "Lab Name", cmbLabName);
+        UIHelper.addFormRow(form, gbc, row, "Shift", cmbShift);
 
         JPanel buttons = UIHelper.actionBar();
         JButton update = UIHelper.actionButton("Update", HCS_Colors.BUTTON_BLUE);
-        update.addActionListener(e -> updatePatient());
+        update.addActionListener(e -> updateTechnician());
         JButton delete = UIHelper.actionButton("Delete", HCS_Colors.ACCENT_RED);
-        delete.addActionListener(e -> deletePatient());
+        delete.addActionListener(e -> deleteTechnician());
         JButton refresh = UIHelper.actionButton("Refresh", HCS_Colors.BUTTON_BLUE);
         refresh.addActionListener(e -> loadTable());
-        JButton view = UIHelper.detailsButton(this, table, "Patient Details");
+        JButton view = UIHelper.detailsButton(this, table, "Lab Technician Details");
         JButton close = UIHelper.secondaryButton("Back");
         close.addActionListener(e -> AppNavigator.replace(this, new AdminDashboard(adminAccount)));
 
@@ -111,8 +121,8 @@ public class AdminPatientsFrame extends JFrame {
 
     private void loadTable() {
         try {
-            table.setModel(service.getPatientsForManagement());
-            UIHelper.hideColumns(table, "patient_id");
+            table.setModel(service.getTechniciansForManagement());
+            UIHelper.hideColumns(table, "technician_id");
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
@@ -120,45 +130,43 @@ public class AdminPatientsFrame extends JFrame {
 
     private void populateFromSelection() {
         try {
-            Patient patient = service.findPatientById(UIHelper.selectedId(table, "patient_id"));
-            if (patient == null) {
+            LabTechnician technician = service.findTechnicianById(UIHelper.selectedId(table, "technician_id"));
+            if (technician == null) {
                 return;
             }
 
-            Account account = service.findAccountById(patient.getAccountId());
+            Account account = service.findAccountById(technician.getAccountId());
             txtAccount.setText(account == null
-                    ? "Account #" + patient.getAccountId()
+                    ? "Account #" + technician.getAccountId()
                     : account.getFirstName() + " " + account.getLastName() + " (" + account.getEmail() + ")");
-            txtDateOfBirth.setText(patient.getDateOfBirth() == null ? "" : patient.getDateOfBirth().toString());
-            txtAddress.setText(patient.getAddress() == null ? "" : patient.getAddress());
-            txtEircode.setText(patient.getEircode() == null ? "" : patient.getEircode());
-            txtBloodType.setText(patient.getBloodType() == null ? "" : patient.getBloodType());
-            txtMedicalRecordNumber.setText(patient.getMedicalRecordNum() == null ? "" : patient.getMedicalRecordNum());
+            txtEmployeeNum.setText(technician.getEmployeeNum() == null ? "" : technician.getEmployeeNum());
+            txtQualification.setText(technician.getQualification() == null ? "" : technician.getQualification());
+            cmbLabName.setSelectedItem(technician.getLabName());
+            cmbShift.setSelectedItem(technician.getShift());
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
     }
 
-    private void updatePatient() {
+    private void updateTechnician() {
         try {
-            service.updatePatient(
-                    UIHelper.selectedId(table, "patient_id"),
-                    LocalDate.parse(txtDateOfBirth.getText().trim()),
-                    txtAddress.getText(),
-                    txtEircode.getText(),
-                    txtBloodType.getText(),
-                    txtMedicalRecordNumber.getText()
+            service.updateTechnician(
+                    UIHelper.selectedId(table, "technician_id"),
+                    txtEmployeeNum.getText(),
+                    txtQualification.getText(),
+                    String.valueOf(cmbLabName.getSelectedItem()),
+                    String.valueOf(cmbShift.getSelectedItem())
             );
             loadTable();
-            JOptionPane.showMessageDialog(this, "Patient updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Lab technician updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
     }
 
-    private void deletePatient() {
+    private void deleteTechnician() {
         try {
-            service.deletePatient(UIHelper.selectedId(table, "patient_id"));
+            service.deleteTechnician(UIHelper.selectedId(table, "technician_id"));
             loadTable();
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
