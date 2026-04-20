@@ -12,6 +12,8 @@ public class Appointment {
     private Integer doctorId;
     private LocalDateTime date;
     private String status;
+    private String medicalNeed;
+    private String consultationRoom;
     
     // creating empty Appointment constructor
     public Appointment() {}
@@ -19,22 +21,38 @@ public class Appointment {
     // creating Appointment constructor with defining arguments
     public Appointment(Integer patientId, Integer doctorId,
                        LocalDateTime date, String status) {
+        this(patientId, doctorId, date, status, "", "");
+    }
+
+    public Appointment(Integer patientId, Integer doctorId,
+                       LocalDateTime date, String status, String medicalNeed,
+                       String consultationRoom) {
         // implementing appointmentId
         this.patientId = patientId;
         this.doctorId = doctorId;
         this.date = date;
         this.status = status;
+        this.medicalNeed = medicalNeed;
+        this.consultationRoom = consultationRoom;
     }
 
     // creating Appointment constructor with defining arguments
     public Appointment(Integer appointmentId, Integer patientId, Integer doctorId,
                    LocalDateTime date, String status) {
+        this(appointmentId, patientId, doctorId, date, status, "", "");
+    }
+
+    public Appointment(Integer appointmentId, Integer patientId, Integer doctorId,
+                       LocalDateTime date, String status, String medicalNeed,
+                       String consultationRoom) {
         // implementing appointmentId
         this.appointmentId = appointmentId;
         this.patientId = patientId;
         this.doctorId = doctorId;
         this.date = date;
         this.status = status;
+        this.medicalNeed = medicalNeed;
+        this.consultationRoom = consultationRoom;
     }
 
     // creating getter for appointmentId
@@ -82,9 +100,25 @@ public class Appointment {
         return status;
     }
 
+    public String getMedicalNeed() {
+        return medicalNeed;
+    }
+
+    public String getConsultationRoom() {
+        return consultationRoom;
+    }
+
     // creating setter for status
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public void setMedicalNeed(String medicalNeed) {
+        this.medicalNeed = medicalNeed;
+    }
+
+    public void setConsultationRoom(String consultationRoom) {
+        this.consultationRoom = consultationRoom;
     }
 
     // implementing the toString method
@@ -94,6 +128,8 @@ public class Appointment {
                 "\nPatient Id: " + patientId +
                 "\nDoctor Id: " + doctorId +
                 "\nAppointment date: " + date +
-                "\nAppointment status: " + status;
+                "\nAppointment status: " + status +
+                "\nMedical Need: " + medicalNeed +
+                "\nConsultation Room: " + consultationRoom;
     }
 }
