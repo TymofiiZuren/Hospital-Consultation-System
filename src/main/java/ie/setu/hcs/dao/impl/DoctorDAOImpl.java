@@ -15,24 +15,31 @@ public class DoctorDAOImpl implements DoctorDAO {
     // CREATE
     @Override
     public void save(Doctor doctor) throws SQLException {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            save(conn, doctor);
+        }
+    }
+
+    public void save(Connection conn, Doctor doctor) throws SQLException {
+        ensureEmployeeNumColumn(conn);
         // creating sql variable with sql statement
         String sql = """
-                INSERT INTO doctors (account_id, specialization, license_number, years_of_experience, consultation_fee, dep_id)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO doctors (account_id, employee_num, specialization, license_number, years_of_experience, consultation_fee, dep_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """;
 
         // validating connection
         // setting up connection with the database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             // inserting arguments into the query statement
             pstmt.setInt(1, doctor.getAccountId());
-            pstmt.setString(2, doctor.getSpecialization());
-            pstmt.setString(3, doctor.getLicenseNum());
-            pstmt.setInt(4, doctor.getYearsOfExperience());
-            pstmt.setInt(5, doctor.getConsultationFee());
-            pstmt.setInt(6, doctor.getDepId());
+            pstmt.setString(2, doctor.getEmployeeNum());
+            pstmt.setString(3, doctor.getSpecialization());
+            pstmt.setString(4, doctor.getLicenseNum());
+            pstmt.setInt(5, doctor.getYearsOfExperience());
+            pstmt.setInt(6, doctor.getConsultationFee());
+            pstmt.setInt(7, doctor.getDepId());
 
             // executing the query in the database
             pstmt.executeUpdate();
@@ -56,18 +63,20 @@ public class DoctorDAOImpl implements DoctorDAO {
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureEmployeeNumColumn(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             // inserting arguments into the query statement
-            pstmt.setInt(1, id);
+                pstmt.setInt(1, id);
 
             // creating result set from the query
-            ResultSet rs = pstmt.executeQuery();
+                ResultSet rs = pstmt.executeQuery();
 
             // validate the result set
-            if (rs.next()) {
+                if (rs.next()) {
                 // display the doctor
-                return mapRowToDoctor(rs);
+                    return mapRowToDoctor(rs);
+                }
             }
         }
 
@@ -85,12 +94,14 @@ public class DoctorDAOImpl implements DoctorDAO {
         // setting up connection with database
         // creating PreparedStatement
         // executing the query
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureEmployeeNumColumn(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
 
             // returning the model from query
-            return TableModelUtil.buildTableModel(rs);
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -100,6 +111,7 @@ public class DoctorDAOImpl implements DoctorDAO {
         // creating sql variable with sql statement
         String sql = """
                 UPDATE doctors SET account_id = ?,
+                                   employee_num = ?,
                                    specialization = ?,
                                    license_number = ?,
                                    years_of_experience = ?,
@@ -111,19 +123,22 @@ public class DoctorDAOImpl implements DoctorDAO {
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureEmployeeNumColumn(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             // inserting arguments into the query statement
-            pstmt.setInt(1, doctor.getAccountId());
-            pstmt.setString(2, doctor.getSpecialization());
-            pstmt.setString(3, doctor.getLicenseNum());
-            pstmt.setInt(4, doctor.getYearsOfExperience());
-            pstmt.setInt(5, doctor.getConsultationFee());
-            pstmt.setInt(6, doctor.getDepId());
-            pstmt.setInt(7, doctor.getDoctorId());
+                pstmt.setInt(1, doctor.getAccountId());
+                pstmt.setString(2, doctor.getEmployeeNum());
+                pstmt.setString(3, doctor.getSpecialization());
+                pstmt.setString(4, doctor.getLicenseNum());
+                pstmt.setInt(5, doctor.getYearsOfExperience());
+                pstmt.setInt(6, doctor.getConsultationFee());
+                pstmt.setInt(7, doctor.getDepId());
+                pstmt.setInt(8, doctor.getDoctorId());
 
             // execute the query
-            pstmt.executeUpdate();
+                pstmt.executeUpdate();
+            }
         }
     }
 
@@ -138,6 +153,7 @@ public class DoctorDAOImpl implements DoctorDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureEmployeeNumColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -155,18 +171,20 @@ public class DoctorDAOImpl implements DoctorDAO {
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureEmployeeNumColumn(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             // inserting arguments into the query statement
-            pstmt.setInt(1, accountId);
+                pstmt.setInt(1, accountId);
 
             // creating result set from the query
-            ResultSet rs = pstmt.executeQuery();
+                ResultSet rs = pstmt.executeQuery();
 
             // validate the result set
-            if (rs.next()) {
+                if (rs.next()) {
                 // display the doctor
-                return mapRowToDoctor(rs);
+                    return mapRowToDoctor(rs);
+                }
             }
         }
 
@@ -183,17 +201,19 @@ public class DoctorDAOImpl implements DoctorDAO {
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureEmployeeNumColumn(conn);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
 
             // inserting arguments into the query statement
-            ps.setInt(1, depId);
+                ps.setInt(1, depId);
 
             // execute the query
-            ResultSet rs = ps.executeQuery();
+                ResultSet rs = ps.executeQuery();
 
             // building and returning DefaultTableModel from ResultSet
-            return TableModelUtil.buildTableModel(rs);
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -206,17 +226,19 @@ public class DoctorDAOImpl implements DoctorDAO {
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureEmployeeNumColumn(conn);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
 
             // inserting arguments into the query statement
-            ps.setString(1, spec);
+                ps.setString(1, spec);
 
             // execute the query
-            ResultSet rs = ps.executeQuery();
+                ResultSet rs = ps.executeQuery();
 
             // building and returning DefaultTableModel from ResultSet
-            return TableModelUtil.buildTableModel(rs);
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -234,6 +256,9 @@ public class DoctorDAOImpl implements DoctorDAO {
         // mapping account id to an object
         doctor.setAccountId(
                 rs.getInt("account_id"));
+
+        doctor.setEmployeeNum(
+                rs.getString("employee_num"));
 
         // mapping specialization to an object
         doctor.setSpecialization(
@@ -257,5 +282,31 @@ public class DoctorDAOImpl implements DoctorDAO {
 
         // returning the doctor information
         return doctor;
+    }
+
+    public void ensureEmployeeNumColumn() throws SQLException {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureEmployeeNumColumn(conn);
+        }
+    }
+
+    private void ensureEmployeeNumColumn(Connection conn) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "doctors", "employee_num")) {
+            if (columns.next()) {
+                return;
+            }
+        }
+
+        try (PreparedStatement pstmt =
+                     conn.prepareStatement("ALTER TABLE doctors ADD COLUMN employee_num VARCHAR(50) NULL AFTER account_id")) {
+            pstmt.executeUpdate();
+        } catch (SQLException ex) {
+            try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "doctors", "employee_num")) {
+                if (columns.next()) {
+                    return;
+                }
+            }
+            throw ex;
+        }
     }
 }

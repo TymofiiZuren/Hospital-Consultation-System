@@ -8,6 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedHashMap;
 
 
 public class DepartmentDAOImpl implements DepartmentDAO {
@@ -58,5 +59,37 @@ public class DepartmentDAOImpl implements DepartmentDAO {
         }
 
         return null;
+    }
+
+    @Override
+    public LinkedHashMap<Integer, String> findAllDepartments() throws SQLException {
+        LinkedHashMap<Integer, String> departments = new LinkedHashMap<>();
+        String sql = "SELECT dep_id, name FROM departments ORDER BY name";
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                departments.put(rs.getInt("dep_id"), rs.getString("name"));
+            }
+        }
+
+        return departments;
+    }
+
+    @Override
+    public String findNameById(Integer depId) throws SQLException {
+        if (depId == null) {
+            return null;
+        }
+
+        String sql = "SELECT name FROM departments WHERE dep_id = ?";
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, depId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getString("name") : null;
+            }
+        }
     }
 }

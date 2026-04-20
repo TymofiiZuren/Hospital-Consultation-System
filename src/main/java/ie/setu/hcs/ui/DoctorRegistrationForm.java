@@ -36,6 +36,7 @@ public class DoctorRegistrationForm extends JFrame {
     private final JTextField txtPpsn = new JTextField();
 
     // professional Information Fields
+    private final JTextField txtEmployeeNum = new JTextField();
     private final JTextField txtMedicalLicense = new JTextField();
     private final JTextField txtYearsExperience = new JTextField();
 
@@ -186,11 +187,13 @@ public class DoctorRegistrationForm extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // setup fields
+        setupTextField(txtEmployeeNum);
         setupTextField(txtMedicalLicense);
         setupTextField(txtYearsExperience);
 
         // adding fields to panel
         int row = 0;
+        addRow(panel, gbc, row++, "Employee Number:", txtEmployeeNum);
         addRow(panel, gbc, row++, "Medical License Number:", txtMedicalLicense);
         addRow(panel, gbc, row++, "Years of Experience:", txtYearsExperience);
 
@@ -334,6 +337,7 @@ public class DoctorRegistrationForm extends JFrame {
         txtEmail.setText("");
         txtPassword.setText("");
         txtPhone.setText("");
+        txtEmployeeNum.setText("");
         txtMedicalLicense.setText("");
         txtYearsExperience.setText("");
         txtSpecialization.setText("");
@@ -395,6 +399,10 @@ public class DoctorRegistrationForm extends JFrame {
     // get medical license from the account
     public String getMedicalLicense() {
         return txtMedicalLicense.getText().trim();
+    }
+
+    public String getEmployeeNum() {
+        return txtEmployeeNum.getText().trim();
     }
 
     // get years experience from the account

@@ -47,6 +47,11 @@ public class DoctorRegistrationController {
             return;
         }
 
+        if (view.getEmployeeNum().isEmpty()) {
+            view.showWarning("Employee number is required.");
+            return;
+        }
+
         // years of experience validation
         int yearsOfExperience;
         try {
@@ -59,7 +64,7 @@ public class DoctorRegistrationController {
         // calling the registerDoctor method of the service class
         service.registerDoctor(view.getFirstName(), view.getLastName(), view.getEmail(),
                 view.getPassword(), view.getPpsn(), view.getPhone(), view.getGender(),
-                view.getMedicalLicense(), yearsOfExperience,
+                view.getEmployeeNum(), view.getMedicalLicense(), yearsOfExperience,
                 view.getDepartment(), view.getSpecialization());
 
         // show success message
