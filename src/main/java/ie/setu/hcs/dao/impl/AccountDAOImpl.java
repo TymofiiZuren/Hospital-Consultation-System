@@ -15,6 +15,12 @@ public class AccountDAOImpl implements AccountDAO {
     // CREATE
     @Override
     public void save(Account account) throws SQLException {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            save(conn, account);
+        }
+    }
+
+    public void save(Connection conn, Account account) throws SQLException {
         // creating sql variable with sql statement
         String sql = """
                 INSERT INTO accounts (email, password_hash, role_id, last_name, first_name, ppsn, phone, gender, is_active, created_at, is_admin)
@@ -24,8 +30,7 @@ public class AccountDAOImpl implements AccountDAO {
         // validating connection
         // setting up connection with the database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ensureAdminColumn(conn);
             // inserting arguments into the query statement
             pstmt.setString(1, account.getEmail());
@@ -149,14 +154,19 @@ public class AccountDAOImpl implements AccountDAO {
     // DELETE
     @Override
     public void delete(Integer id) throws SQLException {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            delete(conn, id);
+        }
+    }
+
+    public void delete(Connection conn, Integer id) throws SQLException {
         // creating sql variable with sql statement
         String sql = "DELETE FROM accounts WHERE account_id = ?";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 

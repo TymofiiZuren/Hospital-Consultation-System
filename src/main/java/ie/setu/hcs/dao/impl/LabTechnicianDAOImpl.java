@@ -15,6 +15,12 @@ public class LabTechnicianDAOImpl implements LabTechnicianDAO {
     // CREATE
     @Override
     public void save(LabTechnician labTechnician) throws SQLException {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            save(conn, labTechnician);
+        }
+    }
+
+    public void save(Connection conn, LabTechnician labTechnician) throws SQLException {
         // creating sql variable with sql statement
         String sql = """
                 INSERT INTO lab_technicians (account_id, qualification, employee_num, lab_name, shift)
@@ -24,8 +30,7 @@ public class LabTechnicianDAOImpl implements LabTechnicianDAO {
         // validating connection
         // setting up connection with the database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             // inserting arguments into the query statement
             pstmt.setInt(1, labTechnician.getAccountId());
             pstmt.setString(2, labTechnician.getQualification());

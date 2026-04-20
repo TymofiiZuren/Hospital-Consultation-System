@@ -23,11 +23,15 @@ import ie.setu.hcs.model.Invoice;
 import ie.setu.hcs.model.MedicalRecord;
 import ie.setu.hcs.model.Patient;
 import ie.setu.hcs.util.TableModelUtil;
+import ie.setu.hcs.util.TransactionRunner;
 
 import javax.swing.table.DefaultTableModel;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -170,31 +174,27 @@ public class ConsultationService {
             throw new ResourceNotFoundException("Appointment was not found.");
         }
 
-        Consultation existing = consultationDAO.findByAppointmentId(appointmentId);
-        Integer consultationId;
+        String normalizedDiagnosis = diagnosis.trim();
+        String normalizedNotes = notes == null ? "" : notes.trim();
+        String normalizedPrescription = prescription == null ? "" : prescription.trim();
+        LocalDateTime now = LocalDateTime.now();
 
-        if (existing == null) {
-            Consultation consultation = new Consultation(
-                    appointmentId,
-                    diagnosis.trim(),
-                    notes == null ? "" : notes.trim(),
-                    LocalDateTime.now()
-            );
-            consultationDAO.save(consultation);
-            consultationId = consultation.getConsultationId();
-        } else {
-            existing.setDiagnosis(diagnosis.trim());
-            existing.setNotes(notes == null ? "" : notes.trim());
-            existing.setCreatedAt(LocalDateTime.now());
-            consultationDAO.update(existing);
-            consultationId = existing.getConsultationId();
-        }
+        return TransactionRunner.inTransaction(conn -> {
+            Consultation existing = findConsultationByAppointmentId(conn, appointmentId);
+            Integer consultationId;
 
-        upsertMedicalRecord(appointment.getPatientId(), consultationId, prescription);
-        upsertInvoice(appointment.getPatientId(), consultationId, invoiceAmount);
+            if (existing == null) {
+                consultationId = insertConsultation(conn, appointmentId, normalizedDiagnosis, normalizedNotes, now);
+            } else {
+                updateConsultation(conn, existing.getConsultationId(), appointmentId, normalizedDiagnosis, normalizedNotes, now);
+                consultationId = existing.getConsultationId();
+            }
 
-        appointmentDAO.updateStatus(appointmentId, "Completed");
-        return consultationId;
+            upsertMedicalRecord(conn, appointment.getPatientId(), consultationId, normalizedPrescription, now);
+            upsertInvoice(conn, appointment.getPatientId(), consultationId, invoiceAmount, now);
+            updateAppointmentStatus(conn, appointmentId, "Completed");
+            return consultationId;
+        });
     }
 
     public String getPrescriptionForConsultation(Integer consultationId) throws Exception {
@@ -220,10 +220,18 @@ public class ConsultationService {
             throw new ValidationException("Please select a consultation first.");
         }
 
-        deleteLinkedRows(labResultDAO.findByConsultationId(consultationId), "lab_result_id", labResultDAO::delete);
-        deleteLinkedRows(invoiceDAO.findByConsultationId(consultationId), "invoice_id", invoiceDAO::delete);
-        deleteLinkedRows(medicalRecordDAO.findByConsultationId(consultationId), "record_id", medicalRecordDAO::delete);
-        consultationDAO.delete(consultationId);
+        Consultation consultation = consultationDAO.findById(consultationId);
+        if (consultation == null) {
+            throw new ResourceNotFoundException("Consultation was not found.");
+        }
+
+        TransactionRunner.inTransaction(conn -> {
+            deleteByConsultationId(conn, "lab_results", "consultation_id", consultationId);
+            deleteByConsultationId(conn, "invoices", "consultation_id", consultationId);
+            deleteByConsultationId(conn, "medical_records", "consultation_id", consultationId);
+            deleteConsultation(conn, consultationId);
+            return null;
+        });
     }
 
     public Integer scheduleFollowUp(Account doctorAccount, Integer sourceAppointmentId, LocalDate date,
@@ -346,51 +354,30 @@ public class ConsultationService {
                 """;
     }
 
-    private void upsertMedicalRecord(Integer patientId, Integer consultationId, String prescription) throws Exception {
-        DefaultTableModel records = medicalRecordDAO.findByConsultationId(consultationId);
-        String normalizedPrescription = prescription == null ? "" : prescription.trim();
+    private void upsertMedicalRecord(Connection conn, Integer patientId, Integer consultationId,
+                                     String normalizedPrescription, LocalDateTime now) throws Exception {
+        MedicalRecord existing = findMedicalRecordByConsultationId(conn, consultationId);
 
-        if (records.getRowCount() == 0) {
+        if (existing == null) {
             if (normalizedPrescription.isBlank()) {
                 return;
             }
-
-            MedicalRecord record = new MedicalRecord(
-                    patientId,
-                    consultationId,
-                    normalizedPrescription,
-                    LocalDateTime.now()
-            );
-            medicalRecordDAO.save(record);
+            insertMedicalRecord(conn, patientId, consultationId, normalizedPrescription, now);
             return;
         }
 
-        Integer recordId = intValue(records, 0, "record_id");
-        MedicalRecord record = medicalRecordDAO.findById(recordId);
-        if (record != null) {
-            record.setPrescription(normalizedPrescription);
-            record.setCreatedAt(LocalDateTime.now());
-            medicalRecordDAO.update(record);
-        }
+        updateMedicalRecord(conn, existing.getRecordId(), patientId, consultationId, normalizedPrescription, now);
     }
 
-    private void upsertInvoice(Integer patientId, Integer consultationId, Float invoiceAmount) throws Exception {
-        DefaultTableModel invoices = invoiceDAO.findByConsultationId(consultationId);
+    private void upsertInvoice(Connection conn, Integer patientId, Integer consultationId,
+                               Float invoiceAmount, LocalDateTime now) throws Exception {
+        Invoice existing = findInvoiceByConsultationId(conn, consultationId);
 
-        if (invoices.getRowCount() == 0) {
+        if (existing == null) {
             if (invoiceAmount == null || invoiceAmount <= 0) {
                 return;
             }
-
-            Invoice invoice = new Invoice(
-                    patientId,
-                    consultationId,
-                    invoiceAmount,
-                    "UNPAID",
-                    LocalDateTime.now(),
-                    null
-            );
-            invoiceDAO.save(invoice);
+            insertInvoice(conn, patientId, consultationId, invoiceAmount, "UNPAID", now, null);
             return;
         }
 
@@ -398,22 +385,16 @@ public class ConsultationService {
             return;
         }
 
-        Integer invoiceId = intValue(invoices, 0, "invoice_id");
-        Invoice invoice = invoiceDAO.findById(invoiceId);
-        if (invoice != null) {
-            invoice.setAmount(invoiceAmount);
-            invoiceDAO.update(invoice);
-        }
+        updateInvoice(conn, existing.getInvoiceId(), patientId, consultationId, invoiceAmount,
+                existing.getInvoiceStatus(), existing.getIssuedAt(), existing.getPaidAt());
     }
 
     private Integer intValue(DefaultTableModel model, int row, String columnName) {
-        Object value = value(model, row, columnName);
-        return value == null ? null : Integer.parseInt(value.toString());
+        return TableModelUtil.intValue(model, row, columnName);
     }
 
     private String stringValue(DefaultTableModel model, int row, String columnName) {
-        Object value = value(model, row, columnName);
-        return value == null ? "" : value.toString();
+        return TableModelUtil.stringValue(model, row, columnName);
     }
 
     private void deleteLinkedRows(DefaultTableModel model, String columnName, IdDeleteAction action) throws Exception {
@@ -426,8 +407,7 @@ public class ConsultationService {
     }
 
     private Object value(DefaultTableModel model, int row, String columnName) {
-        int column = model.findColumn(columnName);
-        return column < 0 ? null : model.getValueAt(row, column);
+        return TableModelUtil.value(model, row, columnName);
     }
 
     private DefaultTableModel loadAppointmentOptions(String sql, Integer doctorId) throws Exception {
@@ -452,5 +432,219 @@ public class ConsultationService {
     @FunctionalInterface
     private interface IdDeleteAction {
         void delete(Integer id) throws Exception;
+    }
+
+    private Consultation findConsultationByAppointmentId(Connection conn, Integer appointmentId) throws SQLException {
+        String sql = "SELECT * FROM consultation WHERE appointment_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapConsultation(rs);
+                }
+                return null;
+            }
+        }
+    }
+
+    private Integer insertConsultation(Connection conn, Integer appointmentId, String diagnosis,
+                                       String notes, LocalDateTime createdAt) throws SQLException {
+        String sql = """
+                INSERT INTO consultation (appointment_id, diagnosis, notes, created_at)
+                VALUES (?, ?, ?, ?)
+                """;
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, appointmentId);
+            ps.setString(2, diagnosis);
+            ps.setString(3, notes);
+            ps.setTimestamp(4, Timestamp.valueOf(createdAt));
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        throw new SQLException("Consultation insert did not return an ID.");
+    }
+
+    private void updateConsultation(Connection conn, Integer consultationId, Integer appointmentId,
+                                    String diagnosis, String notes, LocalDateTime createdAt) throws SQLException {
+        String sql = """
+                UPDATE consultation
+                SET appointment_id = ?, diagnosis = ?, notes = ?, created_at = ?
+                WHERE consultation_id = ?
+                """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, appointmentId);
+            ps.setString(2, diagnosis);
+            ps.setString(3, notes);
+            ps.setTimestamp(4, Timestamp.valueOf(createdAt));
+            ps.setInt(5, consultationId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void deleteConsultation(Connection conn, Integer consultationId) throws SQLException {
+        String sql = "DELETE FROM consultation WHERE consultation_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, consultationId);
+            ps.executeUpdate();
+        }
+    }
+
+    private MedicalRecord findMedicalRecordByConsultationId(Connection conn, Integer consultationId) throws SQLException {
+        String sql = "SELECT * FROM medical_records WHERE consultation_id = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, consultationId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapMedicalRecord(rs);
+                }
+                return null;
+            }
+        }
+    }
+
+    private void insertMedicalRecord(Connection conn, Integer patientId, Integer consultationId,
+                                     String prescription, LocalDateTime createdAt) throws SQLException {
+        String sql = """
+                INSERT INTO medical_records (patient_id, consultation_id, prescription, created_at)
+                VALUES (?, ?, ?, ?)
+                """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            ps.setInt(2, consultationId);
+            ps.setString(3, prescription);
+            ps.setTimestamp(4, Timestamp.valueOf(createdAt));
+            ps.executeUpdate();
+        }
+    }
+
+    private void updateMedicalRecord(Connection conn, Integer recordId, Integer patientId,
+                                     Integer consultationId, String prescription, LocalDateTime createdAt) throws SQLException {
+        String sql = """
+                UPDATE medical_records
+                SET patient_id = ?, consultation_id = ?, prescription = ?, created_at = ?
+                WHERE record_id = ?
+                """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            ps.setInt(2, consultationId);
+            ps.setString(3, prescription);
+            ps.setTimestamp(4, Timestamp.valueOf(createdAt));
+            ps.setInt(5, recordId);
+            ps.executeUpdate();
+        }
+    }
+
+    private Invoice findInvoiceByConsultationId(Connection conn, Integer consultationId) throws SQLException {
+        String sql = "SELECT * FROM invoices WHERE consultation_id = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, consultationId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapInvoice(rs);
+                }
+                return null;
+            }
+        }
+    }
+
+    private void insertInvoice(Connection conn, Integer patientId, Integer consultationId, Float amount,
+                               String status, LocalDateTime issuedAt, LocalDateTime paidAt) throws SQLException {
+        String sql = """
+                INSERT INTO invoices (patient_id, consultation_id, amount, invoice_status, issued_at, paid_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            ps.setInt(2, consultationId);
+            ps.setFloat(3, amount);
+            ps.setString(4, status);
+            ps.setTimestamp(5, Timestamp.valueOf(issuedAt));
+            ps.setTimestamp(6, paidAt == null ? null : Timestamp.valueOf(paidAt));
+            ps.executeUpdate();
+        }
+    }
+
+    private void updateInvoice(Connection conn, Integer invoiceId, Integer patientId, Integer consultationId,
+                               Float amount, String status, LocalDateTime issuedAt, LocalDateTime paidAt) throws SQLException {
+        String sql = """
+                UPDATE invoices
+                SET patient_id = ?, consultation_id = ?, amount = ?, invoice_status = ?, issued_at = ?, paid_at = ?
+                WHERE invoice_id = ?
+                """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, patientId);
+            ps.setInt(2, consultationId);
+            ps.setFloat(3, amount);
+            ps.setString(4, status);
+            ps.setTimestamp(5, Timestamp.valueOf(issuedAt));
+            ps.setTimestamp(6, paidAt == null ? null : Timestamp.valueOf(paidAt));
+            ps.setInt(7, invoiceId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void updateAppointmentStatus(Connection conn, Integer appointmentId, String status) throws SQLException {
+        String sql = "UPDATE appointments SET status = ? WHERE appointment_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, appointmentId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void deleteByConsultationId(Connection conn, String tableName, String columnName, Integer consultationId) throws SQLException {
+        String sql = "DELETE FROM " + tableName + " WHERE " + columnName + " = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, consultationId);
+            ps.executeUpdate();
+        }
+    }
+
+    private Consultation mapConsultation(ResultSet rs) throws SQLException {
+        Consultation consultation = new Consultation();
+        consultation.setConsultationId(rs.getInt("consultation_id"));
+        consultation.setAppointmentId(rs.getInt("appointment_id"));
+        consultation.setDiagnosis(rs.getString("diagnosis"));
+        consultation.setNotes(rs.getString("notes"));
+        Timestamp timestamp = rs.getTimestamp("created_at");
+        if (timestamp != null) {
+            consultation.setCreatedAt(timestamp.toLocalDateTime());
+        }
+        return consultation;
+    }
+
+    private MedicalRecord mapMedicalRecord(ResultSet rs) throws SQLException {
+        MedicalRecord medicalRecord = new MedicalRecord();
+        medicalRecord.setRecordId(rs.getInt("record_id"));
+        medicalRecord.setPatientId(rs.getInt("patient_id"));
+        medicalRecord.setConsultationId(rs.getInt("consultation_id"));
+        medicalRecord.setPrescription(rs.getString("prescription"));
+        Timestamp timestamp = rs.getTimestamp("created_at");
+        if (timestamp != null) {
+            medicalRecord.setCreatedAt(timestamp.toLocalDateTime());
+        }
+        return medicalRecord;
+    }
+
+    private Invoice mapInvoice(ResultSet rs) throws SQLException {
+        Invoice invoice = new Invoice();
+        invoice.setInvoiceId(rs.getInt("invoice_id"));
+        invoice.setPatientId(rs.getInt("patient_id"));
+        invoice.setConsultationId(rs.getInt("consultation_id"));
+        invoice.setAmount(rs.getFloat("amount"));
+        invoice.setInvoiceStatus(rs.getString("invoice_status"));
+        Timestamp issuedAt = rs.getTimestamp("issued_at");
+        if (issuedAt != null) {
+            invoice.setIssuedAt(issuedAt.toLocalDateTime());
+        }
+        Timestamp paidAt = rs.getTimestamp("paid_at");
+        if (paidAt != null) {
+            invoice.setPaidAt(paidAt.toLocalDateTime());
+        }
+        return invoice;
     }
 }

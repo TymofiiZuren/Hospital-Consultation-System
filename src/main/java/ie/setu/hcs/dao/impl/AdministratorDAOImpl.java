@@ -15,6 +15,12 @@ public class AdministratorDAOImpl implements AdministratorDAO {
     // CREATE
     @Override
     public void save(Administrator administrator) throws SQLException {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            save(conn, administrator);
+        }
+    }
+
+    public void save(Connection conn, Administrator administrator) throws SQLException {
         // creating sql variable with sql statement
         String sql = """
                 INSERT INTO administrators (account_id, job_title, employee_num, dep_id)
@@ -24,8 +30,7 @@ public class AdministratorDAOImpl implements AdministratorDAO {
         // validating connection
         // setting up connection with the database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             // inserting arguments into the query statement
             pstmt.setInt(1, administrator.getAccountId());
             pstmt.setString(2, administrator.getJobTitle());
