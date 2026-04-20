@@ -48,8 +48,8 @@ public class InsuranceFrame extends JFrame {
 
     private void initUI() {
         setTitle(title());
-        setSize(940, 650);
-        setMinimumSize(new Dimension(840, 580));
+        setSize(mode == Mode.ADMIN ? 980 : 940, mode == Mode.ADMIN ? 760 : 650);
+        setMinimumSize(new Dimension(840, mode == Mode.ADMIN ? 680 : 580));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -59,9 +59,20 @@ public class InsuranceFrame extends JFrame {
 
         JPanel content = UIHelper.pageBody(new BorderLayout(0, 16));
         content.setBackground(HCS_Colors.LIGHT_BG);
-        content.add(createForm(), BorderLayout.NORTH);
-
-        content.add(UIHelper.tableScrollPane(table), BorderLayout.CENTER);
+        if (mode == Mode.ADMIN) {
+            JPanel page = new JPanel();
+            page.setOpaque(false);
+            page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
+            page.add(createForm());
+            page.add(Box.createVerticalStrut(18));
+            page.add(UIHelper.tableAlignedSection(UIHelper.tableSearchBar(table, "Search Insurance")));
+            page.add(Box.createVerticalStrut(12));
+            page.add(UIHelper.tableScrollPane(table, 380));
+            content.add(UIHelper.scrollablePage(page), BorderLayout.CENTER);
+        } else {
+            content.add(createForm(), BorderLayout.NORTH);
+            content.add(UIHelper.tableScrollPane(table), BorderLayout.CENTER);
+        }
 
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -116,7 +127,9 @@ public class InsuranceFrame extends JFrame {
         btnUpdate = UIHelper.actionButton("Update", HCS_Colors.BUTTON_BLUE);
         btnUpdate.addActionListener(e -> updateInsurance());
         btnUpdate.setEnabled(false);
-        btnUpdate.setToolTipText("Only pending insurance requests can be updated.");
+        btnUpdate.setToolTipText(service.canManageRegardlessOfStatus(account)
+                ? null
+                : "Only pending insurance requests can be updated.");
         JButton delete = UIHelper.actionButton("Delete", HCS_Colors.ACCENT_RED);
         delete.addActionListener(e -> deleteInsurance());
         JButton refresh = UIHelper.actionButton("Refresh", HCS_Colors.BUTTON_GRAY);
@@ -198,7 +211,7 @@ public class InsuranceFrame extends JFrame {
         try {
             Integer insuranceId = UIHelper.selectedId(table, "insurance_id");
             Integer patientId = mode == Mode.PATIENT ? selectedTablePatientId() : selectedPatientId();
-            service.updateInsurance(insuranceId, patientId, txtProvider.getText(), txtPolicy.getText(),
+            service.updateInsurance(account, insuranceId, patientId, txtProvider.getText(), txtPolicy.getText(),
                     selectedStatus(), parseExpiration(), cardDocumentPath());
             loadTable();
             JOptionPane.showMessageDialog(this, "Insurance updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -289,7 +302,7 @@ public class InsuranceFrame extends JFrame {
             return;
         }
 
-        boolean canUpdate = hasPendingSelection();
+        boolean canUpdate = service.canManageRegardlessOfStatus(account) || hasPendingSelection();
         btnUpdate.setEnabled(canUpdate);
         btnUpdate.setToolTipText(canUpdate ? null : "Only pending insurance requests can be updated.");
     }
@@ -388,6 +401,8 @@ public class InsuranceFrame extends JFrame {
     private String subtitle() {
         return mode == Mode.PATIENT
                 ? "Attach your insurance card and submit cover details for verification"
+                : service.canManageRegardlessOfStatus(account)
+                ? "Review insurance submissions and update them at any stage as an administrator."
                 : "Review insurance submissions and update them while they are still pending";
     }
 

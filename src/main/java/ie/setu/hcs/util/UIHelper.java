@@ -3,6 +3,8 @@ package ie.setu.hcs.util;
 import ie.setu.hcs.exception.ValidationException;
 
 import javax.imageio.ImageIO;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.TableModelListener;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -35,6 +37,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public final class UIHelper {
     private static final int FORM_CONTROL_WIDTH = 420;
@@ -528,6 +531,61 @@ public final class UIHelper {
         JPanel panel = roundedPanel(new FlowLayout(FlowLayout.LEFT, 10, 10), HCS_Colors.SURFACE);
         panel.setBorder(new EmptyBorder(10, 12, 10, 12));
         return panel;
+    }
+
+    public static JPanel tableSearchBar(JTable table, String labelText) {
+        JPanel panel = roundedPanel(new BorderLayout(12, 0), HCS_Colors.SURFACE);
+        panel.setBorder(new EmptyBorder(10, 14, 10, 14));
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(font(Font.BOLD, 12));
+        label.setForeground(HCS_Colors.LABEL_COLOR);
+
+        JTextField searchField = new JTextField();
+        styleField(searchField);
+        searchField.setPreferredSize(new Dimension(Math.min(420, TABLE_SECTION_MAX_WIDTH), 40));
+        installTableSearch(table, searchField);
+
+        panel.add(label, BorderLayout.WEST);
+        panel.add(searchField, BorderLayout.CENTER);
+        return panel;
+    }
+
+    public static void installTableSearch(JTable table, JTextField searchField) {
+        if (table == null || searchField == null) {
+            return;
+        }
+
+        Runnable updater = () -> {
+            RowSorter<? extends TableModel> sorter = table.getRowSorter();
+            if (!(sorter instanceof TableRowSorter<?> tableSorter)) {
+                return;
+            }
+
+            String query = searchField.getText();
+            if (query == null || query.isBlank()) {
+                tableSorter.setRowFilter(null);
+            } else {
+                tableSorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(query.trim())));
+            }
+        };
+
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updater.run();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updater.run();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                updater.run();
+            }
+        });
     }
 
     public static JPanel navbarWrapper(JComponent component) {

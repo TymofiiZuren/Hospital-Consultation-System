@@ -162,7 +162,9 @@ public class AppointmentFrame extends JFrame {
                 btnUpdate = UIHelper.actionButton("Update", HCS_Colors.BUTTON_BLUE);
                 btnUpdate.addActionListener(e -> updateAppointment());
                 btnUpdate.setEnabled(false);
-                btnUpdate.setToolTipText("Only pending appointments can be updated.");
+                btnUpdate.setToolTipText(service.canManageRegardlessOfStatus(account)
+                        ? null
+                        : "Only pending appointments can be updated.");
                 buttons.add(btnUpdate);
             }
         }
@@ -342,6 +344,7 @@ public class AppointmentFrame extends JFrame {
             String status = mode == Mode.PATIENT ? "Pending" : selectedStatus();
 
             service.updateAppointment(
+                    account,
                     appointmentId,
                     patientId,
                     selectedDoctorId(),
@@ -470,7 +473,7 @@ public class AppointmentFrame extends JFrame {
             return;
         }
 
-        boolean canUpdate = hasPendingSelection(table);
+        boolean canUpdate = service.canManageRegardlessOfStatus(account) || hasPendingSelection(table);
         btnUpdate.setEnabled(canUpdate);
         btnUpdate.setToolTipText(canUpdate ? null : "Only pending appointments can be updated.");
     }
@@ -666,7 +669,9 @@ public class AppointmentFrame extends JFrame {
         return switch (mode) {
             case PATIENT -> "Book a visit with a medical need and choose from available appointment slots";
             case DOCTOR -> "Review appointment requests and update their status with patient-facing notifications";
-            case ADMIN -> "Create visits and adjust pending requests before they move further in the workflow";
+            case ADMIN -> service.canManageRegardlessOfStatus(account)
+                    ? "Create visits and update any appointment as an administrator."
+                    : "Create visits and adjust pending requests before they move further in the workflow";
         };
     }
 

@@ -4,14 +4,13 @@ package ie.setu.hcs.service;
 // importing stuff
 import ie.setu.hcs.dao.impl.AccountDAOImpl;
 import ie.setu.hcs.dao.impl.PatientDAOImpl;
-import ie.setu.hcs.dao.interfaces.AccountDAO;
-import ie.setu.hcs.dao.interfaces.PatientDAO;
 import ie.setu.hcs.exception.ConflictException;
 import ie.setu.hcs.exception.OperationFailedException;
-import ie.setu.hcs.exception.ValidationException;
 import ie.setu.hcs.model.Account;
 import ie.setu.hcs.model.Patient;
+import ie.setu.hcs.util.InputValidationUtil;
 import ie.setu.hcs.util.PasswordUtil;
+import ie.setu.hcs.util.TransactionRunner;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,8 +19,8 @@ import java.util.concurrent.ThreadLocalRandom;
 // implementing PatientRegistrationService class
 public class PatientRegistrationService {
 
-    private final AccountDAO accountDAO;
-    private final PatientDAO patientDAO;
+    private final AccountDAOImpl accountDAO;
+    private final PatientDAOImpl patientDAO;
 
     // creating PatientRegistration constructor to initialize DAOs
     public PatientRegistrationService() {
@@ -43,26 +42,26 @@ public class PatientRegistrationService {
                                 String bloodType) throws Exception {
 
         // check the required fields
-        if (firstName.isBlank() || lastName.isBlank() ||
-                email.isBlank() || password.isBlank()) {
-            throw new ValidationException("Required fields cannot be empty.");
-        }
+        String normalizedFirstName = InputValidationUtil.requireNonBlank(firstName, "First name");
+        String normalizedLastName = InputValidationUtil.requireNonBlank(lastName, "Last name");
+        String normalizedEmail = InputValidationUtil.requireEmail(email);
+        String normalizedPassword = InputValidationUtil.requireNonBlank(password, "Password");
 
         // check if the email already exists
-        if (accountDAO.existsByEmail(email)) {
+        if (accountDAO.existsByEmail(normalizedEmail)) {
             throw new ConflictException("Email already registered.");
         }
 
         // hash the password
-        String hashedPassword = PasswordUtil.hash(password);
+        String hashedPassword = PasswordUtil.hash(normalizedPassword);
 
         // create Account
         Account account = new Account(
-                email,
+                normalizedEmail,
                 hashedPassword,
                 1, // roleId = PATIENT
-                lastName,
-                firstName,
+                normalizedLastName,
+                normalizedFirstName,
                 ppsn,
                 phone,
                 gender,
@@ -71,14 +70,9 @@ public class PatientRegistrationService {
         );
         account.setAdmin(false);
 
-        // get the accountId
-        accountDAO.save(account);
-        Integer accountId = account.getAccountId();
-
         try {
-            // create Patient
             Patient patient = new Patient(
-                    accountId,
+                    null,
                     dob,
                     address,
                     eircode,
@@ -86,17 +80,13 @@ public class PatientRegistrationService {
                     generateMedicalRecordNumber()
             );
 
-            // save the patient
-            patientDAO.save(patient);
+            TransactionRunner.inTransaction(conn -> {
+                accountDAO.save(conn, account);
+                patient.setAccountId(account.getAccountId());
+                patientDAO.save(conn, patient);
+                return null;
+            });
         } catch (Exception ex) {
-            // ROLLBACK: Delete the account if patient creation fails
-            try {
-                accountDAO.delete(accountId);
-            } catch (Exception deleteEx) {
-                // Log the error but don't suppress the original exception
-                System.err.println("Failed to rollback account creation: " + deleteEx.getMessage());
-            }
-            // Re-throw the original exception
             throw new OperationFailedException("Patient registration failed: " + ex.getMessage(), ex);
         }
     }

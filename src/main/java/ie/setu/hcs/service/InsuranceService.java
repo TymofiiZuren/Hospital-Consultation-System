@@ -110,13 +110,19 @@ public class InsuranceService {
 
     public void updateInsurance(Integer insuranceId, Integer patientId, String provider, String policy,
                                 String status, LocalDate expirationDate) throws Exception {
-        updateInsurance(insuranceId, patientId, provider, policy, status, expirationDate, null);
+        updateInsurance(null, insuranceId, patientId, provider, policy, status, expirationDate, null);
     }
 
     public void updateInsurance(Integer insuranceId, Integer patientId, String provider, String policy,
                                 String status, LocalDate expirationDate, String cardDocumentPath) throws Exception {
+        updateInsurance(null, insuranceId, patientId, provider, policy, status, expirationDate, cardDocumentPath);
+    }
+
+    public void updateInsurance(Account actor, Integer insuranceId, Integer patientId, String provider, String policy,
+                                String status, LocalDate expirationDate, String cardDocumentPath) throws Exception {
         Insurance existing = requireInsurance(insuranceId);
-        if (!STATUS_PENDING_VERIFICATION.equalsIgnoreCase(existing.getStatus())) {
+        if (!canOverridePendingRestriction(actor)
+                && !STATUS_PENDING_VERIFICATION.equalsIgnoreCase(existing.getStatus())) {
             throw new ConflictException("Only pending insurance requests can be updated.");
         }
         validate(patientId, provider, policy, status, expirationDate);
@@ -227,6 +233,10 @@ public class InsuranceService {
         return insuranceId == null ? "insurance-card" : "insurance-card-" + insuranceId;
     }
 
+    public boolean canManageRegardlessOfStatus(Account actor) {
+        return canOverridePendingRestriction(actor);
+    }
+
     private void validate(Integer patientId, String provider, String policy, String status,
                           LocalDate expirationDate) throws Exception {
         if (patientId == null) {
@@ -268,6 +278,11 @@ public class InsuranceService {
     private boolean isRemoteSource(String sourceLocation) {
         String normalized = sourceLocation.toLowerCase();
         return normalized.startsWith("http://") || normalized.startsWith("https://");
+    }
+
+    private boolean canOverridePendingRestriction(Account actor) {
+        return actor != null
+                && (Boolean.TRUE.equals(actor.isAdmin()) || Integer.valueOf(4).equals(actor.getRoleId()));
     }
 
     private Insurance requireInsurance(Integer insuranceId) throws Exception {

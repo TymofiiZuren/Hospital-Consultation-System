@@ -2,7 +2,7 @@ package ie.setu.hcs.ui;
 
 import ie.setu.hcs.model.Account;
 import ie.setu.hcs.model.Doctor;
-import ie.setu.hcs.service.AdminService;
+import ie.setu.hcs.service.DoctorManagementService;
 import ie.setu.hcs.util.AppNavigator;
 import ie.setu.hcs.util.HCS_Colors;
 import ie.setu.hcs.util.UIHelper;
@@ -10,22 +10,25 @@ import ie.setu.hcs.util.UIHelper;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.Map;
 
 public class AdminDoctorsFrame extends JFrame {
     private final Account adminAccount;
-    private final AdminService service = new AdminService();
+    private final DoctorManagementService service = new DoctorManagementService();
 
     private final JTable table = UIHelper.table(new DefaultTableModel());
     private final JTextField txtAccount = new JTextField();
+    private final JTextField txtEmployeeNum = new JTextField();
     private final JTextField txtSpecialization = new JTextField();
     private final JTextField txtLicense = new JTextField();
     private final JTextField txtYears = new JTextField();
     private final JTextField txtFee = new JTextField();
-    private final JTextField txtDepartmentId = new JTextField();
+    private final JComboBox<String> cmbDepartment = new JComboBox<>();
 
     public AdminDoctorsFrame(Account adminAccount) {
         this.adminAccount = adminAccount;
         initUI();
+        loadDepartments();
         loadTable();
     }
 
@@ -48,6 +51,8 @@ public class AdminDoctorsFrame extends JFrame {
         page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
         page.add(createForm());
         page.add(Box.createVerticalStrut(18));
+        page.add(UIHelper.tableAlignedSection(UIHelper.tableSearchBar(table, "Search Doctors")));
+        page.add(Box.createVerticalStrut(12));
         page.add(UIHelper.tableScrollPane(table, 380));
         content.add(UIHelper.scrollablePage(page), BorderLayout.CENTER);
 
@@ -70,19 +75,21 @@ public class AdminDoctorsFrame extends JFrame {
         int row = 0;
 
         UIHelper.styleField(txtAccount);
+        UIHelper.styleField(txtEmployeeNum);
         UIHelper.styleField(txtSpecialization);
         UIHelper.styleField(txtLicense);
         UIHelper.styleField(txtYears);
         UIHelper.styleField(txtFee);
-        UIHelper.styleField(txtDepartmentId);
+        UIHelper.styleCombo(cmbDepartment);
         txtAccount.setEditable(false);
 
         UIHelper.addFormRow(form, gbc, row++, "Account", txtAccount);
+        UIHelper.addFormRow(form, gbc, row++, "Employee Number", txtEmployeeNum);
         UIHelper.addFormRow(form, gbc, row++, "Specialization", txtSpecialization);
         UIHelper.addFormRow(form, gbc, row++, "License No.", txtLicense);
         UIHelper.addFormRow(form, gbc, row++, "Years of Experience", txtYears);
         UIHelper.addFormRow(form, gbc, row++, "Consultation Fee", txtFee);
-        UIHelper.addFormRow(form, gbc, row, "Department ID", txtDepartmentId);
+        UIHelper.addFormRow(form, gbc, row, "Department", cmbDepartment);
 
         JPanel buttons = UIHelper.actionBar();
         JButton update = UIHelper.actionButton("Update", HCS_Colors.BUTTON_BLUE);
@@ -126,11 +133,15 @@ public class AdminDoctorsFrame extends JFrame {
             txtAccount.setText(account == null
                     ? "Account #" + doctor.getAccountId()
                     : account.getFirstName() + " " + account.getLastName() + " (" + account.getEmail() + ")");
+            txtEmployeeNum.setText(doctor.getEmployeeNum() == null ? "" : doctor.getEmployeeNum());
             txtSpecialization.setText(doctor.getSpecialization() == null ? "" : doctor.getSpecialization());
             txtLicense.setText(doctor.getLicenseNum() == null ? "" : doctor.getLicenseNum());
             txtYears.setText(doctor.getYearsOfExperience() == null ? "" : String.valueOf(doctor.getYearsOfExperience()));
             txtFee.setText(doctor.getConsultationFee() == null ? "" : String.valueOf(doctor.getConsultationFee()));
-            txtDepartmentId.setText(doctor.getDepId() == null ? "" : String.valueOf(doctor.getDepId()));
+            String departmentName = service.getDepartmentName(doctor.getDepId());
+            if (departmentName != null) {
+                cmbDepartment.setSelectedItem(departmentName);
+            }
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
@@ -142,9 +153,10 @@ public class AdminDoctorsFrame extends JFrame {
                     UIHelper.selectedId(table, "doctor_id"),
                     txtSpecialization.getText(),
                     txtLicense.getText(),
+                    txtEmployeeNum.getText(),
                     Integer.parseInt(txtYears.getText().trim()),
                     Integer.parseInt(txtFee.getText().trim()),
-                    Integer.parseInt(txtDepartmentId.getText().trim())
+                    String.valueOf(cmbDepartment.getSelectedItem())
             );
             loadTable();
             JOptionPane.showMessageDialog(this, "Doctor updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -157,6 +169,17 @@ public class AdminDoctorsFrame extends JFrame {
         try {
             service.deleteDoctor(UIHelper.selectedId(table, "doctor_id"));
             loadTable();
+        } catch (Exception ex) {
+            UIHelper.showError(this, ex);
+        }
+    }
+
+    private void loadDepartments() {
+        try {
+            cmbDepartment.removeAllItems();
+            for (Map.Entry<Integer, String> entry : service.getDepartments().entrySet()) {
+                cmbDepartment.addItem(entry.getValue());
+            }
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }

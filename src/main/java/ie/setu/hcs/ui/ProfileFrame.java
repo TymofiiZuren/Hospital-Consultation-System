@@ -1,6 +1,15 @@
 package ie.setu.hcs.ui;
 
+import ie.setu.hcs.dao.impl.AdministratorDAOImpl;
+import ie.setu.hcs.dao.impl.DepartmentDAOImpl;
+import ie.setu.hcs.dao.impl.DoctorDAOImpl;
+import ie.setu.hcs.dao.impl.LabTechnicianDAOImpl;
+import ie.setu.hcs.dao.impl.PatientDAOImpl;
 import ie.setu.hcs.model.Account;
+import ie.setu.hcs.model.Administrator;
+import ie.setu.hcs.model.Doctor;
+import ie.setu.hcs.model.LabTechnician;
+import ie.setu.hcs.model.Patient;
 import ie.setu.hcs.util.AppNavigator;
 import ie.setu.hcs.util.HCS_Colors;
 import ie.setu.hcs.util.UIHelper;
@@ -8,6 +17,8 @@ import ie.setu.hcs.util.UIHelper;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class ProfileFrame extends JFrame {
     private final Account account;
@@ -42,6 +53,9 @@ public class ProfileFrame extends JFrame {
         addRow(card, gbc, row++, "Phone", account.getPhone());
         addRow(card, gbc, row++, "Gender", account.getGender());
         addRow(card, gbc, row++, "Role", roleName());
+        for (Map.Entry<String, String> entry : loadExtraDetails().entrySet()) {
+            addRow(card, gbc, row++, entry.getKey(), entry.getValue());
+        }
         addRow(card, gbc, row, "Active", Boolean.TRUE.equals(account.isActive()) ? "Yes" : "No");
         Dimension preferred = card.getPreferredSize();
         card.setPreferredSize(new Dimension(Math.max(700, preferred.width), preferred.height));
@@ -103,5 +117,64 @@ public class ProfileFrame extends JFrame {
             case 3 -> "Lab Technician";
             default -> "Unknown";
         };
+    }
+
+    private Map<String, String> loadExtraDetails() {
+        LinkedHashMap<String, String> details = new LinkedHashMap<>();
+        try {
+            switch (account.getRoleId()) {
+                case 1 -> addPatientDetails(details);
+                case 2 -> addDoctorDetails(details);
+                case 3 -> addLabTechnicianDetails(details);
+                case 4 -> addAdministratorDetails(details);
+                default -> {
+                }
+            }
+        } catch (Exception ex) {
+            details.put("Additional Details", "Unavailable");
+        }
+        return details;
+    }
+
+    private void addPatientDetails(Map<String, String> details) throws Exception {
+        Patient patient = new PatientDAOImpl().findByAccountId(account.getAccountId());
+        if (patient == null) {
+            return;
+        }
+        details.put("Medical Record No.", patient.getMedicalRecordNum());
+    }
+
+    private void addDoctorDetails(Map<String, String> details) throws Exception {
+        Doctor doctor = new DoctorDAOImpl().findByAccountId(account.getAccountId());
+        if (doctor == null) {
+            return;
+        }
+        DepartmentDAOImpl departmentDAO = new DepartmentDAOImpl();
+        details.put("Employee Number", doctor.getEmployeeNum());
+        details.put("Department", departmentDAO.findNameById(doctor.getDepId()));
+        details.put("Specialization", doctor.getSpecialization());
+        details.put("License Number", doctor.getLicenseNum());
+    }
+
+    private void addLabTechnicianDetails(Map<String, String> details) throws Exception {
+        LabTechnician technician = new LabTechnicianDAOImpl().findByAccountId(account.getAccountId());
+        if (technician == null) {
+            return;
+        }
+        details.put("Employee Number", technician.getEmployeeNum());
+        details.put("Qualification", technician.getQualification());
+        details.put("Lab Name", technician.getLabName());
+        details.put("Shift", technician.getShift());
+    }
+
+    private void addAdministratorDetails(Map<String, String> details) throws Exception {
+        Administrator administrator = new AdministratorDAOImpl().findByAccountId(account.getAccountId());
+        if (administrator == null) {
+            return;
+        }
+        DepartmentDAOImpl departmentDAO = new DepartmentDAOImpl();
+        details.put("Job Title", administrator.getJobTitle());
+        details.put("Employee Number", administrator.getEmployeeNum());
+        details.put("Department", departmentDAO.findNameById(administrator.getDepId()));
     }
 }

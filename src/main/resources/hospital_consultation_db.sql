@@ -154,6 +154,7 @@ INSERT INTO `departments` (`dep_id`, `name`) VALUES
 CREATE TABLE `doctors` (
   `doctor_id` int(11) NOT NULL,
   `account_id` int(11) NOT NULL,
+  `employee_num` varchar(50) DEFAULT NULL,
   `specialization` varchar(100) NOT NULL,
   `license_number` varchar(20) NOT NULL,
   `years_of_experience` int(5) NOT NULL,
@@ -165,8 +166,8 @@ CREATE TABLE `doctors` (
 -- Dumping data for table `doctors`
 --
 
-INSERT INTO `doctors` (`doctor_id`, `account_id`, `specialization`, `license_number`, `years_of_experience`, `consultation_fee`, `dep_id`) VALUES
-(1, 9, 'Neurologist', '3928473', 3, 0, 2);
+INSERT INTO `doctors` (`doctor_id`, `account_id`, `employee_num`, `specialization`, `license_number`, `years_of_experience`, `consultation_fee`, `dep_id`) VALUES
+(1, 9, 'DOC-1001', 'Neurologist', '3928473', 3, 0, 2);
 
 -- --------------------------------------------------------
 

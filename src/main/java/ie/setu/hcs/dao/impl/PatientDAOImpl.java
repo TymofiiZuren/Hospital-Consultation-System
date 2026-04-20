@@ -15,6 +15,12 @@ public class PatientDAOImpl implements PatientDAO {
     // CREATE
     @Override
     public void save(Patient patient) throws SQLException {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            save(conn, patient);
+        }
+    }
+
+    public void save(Connection conn, Patient patient) throws SQLException {
         // creating sql variable with sql statement
         String sql = """
                 INSERT INTO patients (account_id, date_of_birth, address, eircode, blood_type, medical_record_number) VALUES (?, ?, ?, ?, ?, ?)
@@ -23,8 +29,7 @@ public class PatientDAOImpl implements PatientDAO {
         // validating connection
         // setting up connection with the database
         // creating PreparedStatement
-        try (Connection conn = DatabaseConfig.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             // inserting arguments into the query statement
             pstmt.setInt(1, patient.getAccountId());
             pstmt.setDate(2, Date.valueOf(patient.getDateOfBirth()));

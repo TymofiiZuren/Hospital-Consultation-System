@@ -6,6 +6,7 @@ public class Doctor {
     // defining attributes of the class
     private Integer doctorId;
     private Integer accountId;
+    private String employeeNum;
     private String specialization;
     private String licenseNum;
     private Integer yearsOfExperience;
@@ -16,11 +17,12 @@ public class Doctor {
     public Doctor() {}
 
     // creating Doctor constructor with defining arguments
-    public Doctor(Integer accountId, String specialization,
+    public Doctor(Integer accountId, String employeeNum, String specialization,
                   String licenseNum, Integer yearsOfExperience, Integer consultationFee,
                   Integer depId) {
         // implementing attributes
         this.accountId = accountId;
+        this.employeeNum = employeeNum;
         this.specialization = specialization;
         this.licenseNum = licenseNum;
         this.yearsOfExperience = yearsOfExperience;
@@ -29,12 +31,13 @@ public class Doctor {
     }
 
     // creating Doctor constructor with defining arguments
-    public Doctor(Integer doctorId, Integer accountId, String specialization,
+    public Doctor(Integer doctorId, Integer accountId, String employeeNum, String specialization,
                   String licenseNum, Integer yearsOfExperience, Integer consultationFee,
                   Integer depId) {
         // implementing attributes
         this.doctorId = doctorId;
         this.accountId = accountId;
+        this.employeeNum = employeeNum;
         this.specialization = specialization;
         this.licenseNum = licenseNum;
         this.yearsOfExperience = yearsOfExperience;
@@ -50,6 +53,10 @@ public class Doctor {
     // creating getter for accountId
     public Integer getAccountId() {
         return accountId;
+    }
+
+    public String getEmployeeNum() {
+        return employeeNum;
     }
 
     // creating getter for specialization
@@ -87,6 +94,10 @@ public class Doctor {
         this.accountId = accountId;
     }
 
+    public void setEmployeeNum(String employeeNum) {
+        this.employeeNum = employeeNum;
+    }
+
     // creating setter for specialization
     public void setSpecialization(String specialization) {
         this.specialization = specialization;
@@ -117,6 +128,7 @@ public class Doctor {
     public String toString() {
         return "\nDoctor Id: " + doctorId +
                 "\nAccount Id: " + accountId +
+                "\nEmployee Num: " + employeeNum +
                 "\nDep Id: " + depId +
                 "\nLicense Number: " + licenseNum;
     }

@@ -1,6 +1,5 @@
 package ie.setu.hcs.ui;
 
-import ie.setu.hcs.exception.ValidationException;
 import ie.setu.hcs.model.Account;
 import ie.setu.hcs.service.AdminService;
 import ie.setu.hcs.util.AppNavigator;
@@ -22,14 +21,13 @@ public class AdminAccountsFrame extends JFrame {
     private final JTextField txtPpsn = new JTextField();
     private final JTextField txtPhone = new JTextField();
     private final JTextField txtGender = new JTextField();
-    private final JComboBox<RoleOption> cmbRole = new JComboBox<>();
+    private final JTextField txtRole = new JTextField();
     private final JCheckBox chkActive = new JCheckBox("Active");
     private final JCheckBox chkAdmin = new JCheckBox("Admin");
 
     public AdminAccountsFrame(Account adminAccount) {
         this.adminAccount = adminAccount;
         initUI();
-        loadRoles();
         loadTable();
     }
 
@@ -52,6 +50,8 @@ public class AdminAccountsFrame extends JFrame {
         page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
         page.add(createForm());
         page.add(Box.createVerticalStrut(18));
+        page.add(UIHelper.tableAlignedSection(UIHelper.tableSearchBar(table, "Search Accounts")));
+        page.add(Box.createVerticalStrut(12));
         page.add(UIHelper.tableScrollPane(table, 380));
         content.add(UIHelper.scrollablePage(page), BorderLayout.CENTER);
 
@@ -79,12 +79,13 @@ public class AdminAccountsFrame extends JFrame {
         UIHelper.styleField(txtPpsn);
         UIHelper.styleField(txtPhone);
         UIHelper.styleField(txtGender);
-        UIHelper.styleCombo(cmbRole);
+        UIHelper.styleField(txtRole);
+        txtRole.setEditable(false);
 
         UIHelper.addFormRow(form, gbc, row++, "Email", txtEmail);
         UIHelper.addFormRow(form, gbc, row++, "First Name", txtFirstName);
         UIHelper.addFormRow(form, gbc, row++, "Last Name", txtLastName);
-        UIHelper.addFormRow(form, gbc, row++, "Role", cmbRole);
+        UIHelper.addFormRow(form, gbc, row++, "Role", txtRole);
         UIHelper.addFormRow(form, gbc, row++, "PPSN", txtPpsn);
         UIHelper.addFormRow(form, gbc, row++, "Phone", txtPhone);
         UIHelper.addFormRow(form, gbc, row++, "Gender", txtGender);
@@ -122,14 +123,6 @@ public class AdminAccountsFrame extends JFrame {
         return panel;
     }
 
-    private void loadRoles() {
-        cmbRole.removeAllItems();
-        cmbRole.addItem(new RoleOption(1, "Patient"));
-        cmbRole.addItem(new RoleOption(2, "Doctor"));
-        cmbRole.addItem(new RoleOption(3, "Lab Technician"));
-        cmbRole.addItem(new RoleOption(4, "Admin"));
-    }
-
     private void loadTable() {
         try {
             table.setModel(service.getAccountsForManagement());
@@ -152,9 +145,9 @@ public class AdminAccountsFrame extends JFrame {
             txtPpsn.setText(account.getPpsn() == null ? "" : account.getPpsn());
             txtPhone.setText(account.getPhone() == null ? "" : account.getPhone());
             txtGender.setText(account.getGender() == null ? "" : account.getGender());
+            txtRole.setText(roleLabel(account));
             chkActive.setSelected(Boolean.TRUE.equals(account.isActive()));
             chkAdmin.setSelected(Boolean.TRUE.equals(account.isAdmin()));
-            selectRole(account.getRoleId());
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
@@ -165,7 +158,6 @@ public class AdminAccountsFrame extends JFrame {
             service.updateAccount(
                     UIHelper.selectedId(table, "account_id"),
                     txtEmail.getText(),
-                    selectedRoleId(),
                     txtFirstName.getText(),
                     txtLastName.getText(),
                     txtPpsn.getText(),
@@ -190,31 +182,17 @@ public class AdminAccountsFrame extends JFrame {
         }
     }
 
-    private Integer selectedRoleId() throws Exception {
-        RoleOption option = (RoleOption) cmbRole.getSelectedItem();
-        if (option == null) {
-            throw new ValidationException("Please choose a role.");
+    private String roleLabel(Account account) {
+        String baseRole = switch (account.getRoleId()) {
+            case 1 -> "Patient";
+            case 2 -> "Doctor";
+            case 3 -> "Lab Technician";
+            case 4 -> "Administrator";
+            default -> "Role " + account.getRoleId();
+        };
+        if (Boolean.TRUE.equals(account.isAdmin()) && !Integer.valueOf(4).equals(account.getRoleId())) {
+            return baseRole + " (Admin Access)";
         }
-        return option.roleId();
-    }
-
-    private void selectRole(Integer roleId) {
-        if (roleId == null) {
-            return;
-        }
-        for (int i = 0; i < cmbRole.getItemCount(); i++) {
-            RoleOption option = cmbRole.getItemAt(i);
-            if (roleId.equals(option.roleId())) {
-                cmbRole.setSelectedIndex(i);
-                return;
-            }
-        }
-    }
-
-    private record RoleOption(Integer roleId, String label) {
-        @Override
-        public String toString() {
-            return label;
-        }
+        return baseRole;
     }
 }

@@ -3,23 +3,21 @@ package ie.setu.hcs.service;
 import ie.setu.hcs.dao.impl.AccountDAOImpl;
 import ie.setu.hcs.dao.impl.AdministratorDAOImpl;
 import ie.setu.hcs.dao.impl.DepartmentDAOImpl;
-import ie.setu.hcs.dao.interfaces.AccountDAO;
-import ie.setu.hcs.dao.interfaces.AdministratorDAO;
-import ie.setu.hcs.dao.interfaces.DepartmentDAO;
 import ie.setu.hcs.exception.ConflictException;
 import ie.setu.hcs.exception.OperationFailedException;
-import ie.setu.hcs.exception.ValidationException;
 import ie.setu.hcs.model.Account;
 import ie.setu.hcs.model.Administrator;
+import ie.setu.hcs.util.InputValidationUtil;
 import ie.setu.hcs.util.PasswordUtil;
+import ie.setu.hcs.util.TransactionRunner;
 
 import java.time.LocalDateTime;
 
 public class AdminRegistrationService {
 
-    private final AccountDAO accountDAO;
-    private final AdministratorDAO administratorDAO;
-    private final DepartmentDAO departmentDAO;
+    private final AccountDAOImpl accountDAO;
+    private final AdministratorDAOImpl administratorDAO;
+    private final DepartmentDAOImpl departmentDAO;
 
     public AdminRegistrationService() {
         this.accountDAO = new AccountDAOImpl();
@@ -38,23 +36,23 @@ public class AdminRegistrationService {
                               String department,
                               String jobTitle) throws Exception {
 
-        if (firstName.isBlank() || lastName.isBlank() ||
-                email.isBlank() || password.isBlank()) {
-            throw new ValidationException("Required fields cannot be empty.");
-        }
+        String normalizedFirstName = InputValidationUtil.requireNonBlank(firstName, "First name");
+        String normalizedLastName = InputValidationUtil.requireNonBlank(lastName, "Last name");
+        String normalizedEmail = InputValidationUtil.requireEmail(email);
+        String normalizedPassword = InputValidationUtil.requireNonBlank(password, "Password");
 
-        if (accountDAO.existsByEmail(email)) {
+        if (accountDAO.existsByEmail(normalizedEmail)) {
             throw new ConflictException("Email already registered.");
         }
 
-        String hashedPassword = PasswordUtil.hash(password);
+        String hashedPassword = PasswordUtil.hash(normalizedPassword);
 
         Account account = new Account(
-                email,
+                normalizedEmail,
                 hashedPassword,
                 4, // roleId = Administrator
-                lastName,
-                firstName,
+                normalizedLastName,
+                normalizedFirstName,
                 ppsn,
                 phone,
                 gender,
@@ -63,28 +61,22 @@ public class AdminRegistrationService {
         );
         account.setAdmin(true);
 
-        accountDAO.save(account);
-        Integer accountId = account.getAccountId();
-
         try {
             Integer depId = departmentDAO.findByName(department);
 
             Administrator administrator = new Administrator(
-                    accountId,
+                    null,
                     jobTitle,
                     employeeNum,
                     depId
             );
-            administratorDAO.save(administrator);
+            TransactionRunner.inTransaction(conn -> {
+                accountDAO.save(conn, account);
+                administrator.setAccountId(account.getAccountId());
+                administratorDAO.save(conn, administrator);
+                return null;
+            });
         } catch (Exception ex) {
-            // ROLLBACK: Delete the account if administrator creation fails
-            try {
-                accountDAO.delete(accountId);
-            } catch (Exception deleteEx) {
-                // Log the error but don't suppress the original exception
-                System.err.println("Failed to rollback account creation: " + deleteEx.getMessage());
-            }
-            // Re-throw the original exception
             throw new OperationFailedException("Administrator registration failed: " + ex.getMessage(), ex);
         }
     }

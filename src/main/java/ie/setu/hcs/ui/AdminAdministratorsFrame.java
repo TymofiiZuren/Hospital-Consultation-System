@@ -1,7 +1,7 @@
 package ie.setu.hcs.ui;
 
 import ie.setu.hcs.model.Account;
-import ie.setu.hcs.model.Patient;
+import ie.setu.hcs.model.Administrator;
 import ie.setu.hcs.service.AdminService;
 import ie.setu.hcs.util.AppNavigator;
 import ie.setu.hcs.util.HCS_Colors;
@@ -10,28 +10,27 @@ import ie.setu.hcs.util.UIHelper;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.LocalDate;
+import java.util.Map;
 
-public class AdminPatientsFrame extends JFrame {
+public class AdminAdministratorsFrame extends JFrame {
     private final Account adminAccount;
     private final AdminService service = new AdminService();
 
     private final JTable table = UIHelper.table(new DefaultTableModel());
     private final JTextField txtAccount = new JTextField();
-    private final JTextField txtDateOfBirth = new JTextField();
-    private final JTextField txtAddress = new JTextField();
-    private final JTextField txtEircode = new JTextField();
-    private final JTextField txtBloodType = new JTextField();
-    private final JTextField txtMedicalRecordNumber = new JTextField();
+    private final JTextField txtJobTitle = new JTextField();
+    private final JTextField txtEmployeeNum = new JTextField();
+    private final JComboBox<String> cmbDepartment = new JComboBox<>();
 
-    public AdminPatientsFrame(Account adminAccount) {
+    public AdminAdministratorsFrame(Account adminAccount) {
         this.adminAccount = adminAccount;
         initUI();
+        loadDepartments();
         loadTable();
     }
 
     private void initUI() {
-        setTitle("Patients");
+        setTitle("Administrators");
         setSize(980, 760);
         setMinimumSize(new Dimension(900, 680));
         setLocationRelativeTo(null);
@@ -39,7 +38,7 @@ public class AdminPatientsFrame extends JFrame {
 
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(HCS_Colors.LIGHT_BG);
-        root.add(UIHelper.pageHeader("Patients", "Review patient profiles and update the selected patient record"), BorderLayout.NORTH);
+        root.add(UIHelper.pageHeader("Administrators", "Review administrator profiles and update staff details"), BorderLayout.NORTH);
 
         JPanel content = UIHelper.pageBody(new BorderLayout(0, 16));
         content.setBackground(HCS_Colors.LIGHT_BG);
@@ -49,7 +48,7 @@ public class AdminPatientsFrame extends JFrame {
         page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
         page.add(createForm());
         page.add(Box.createVerticalStrut(18));
-        page.add(UIHelper.tableAlignedSection(UIHelper.tableSearchBar(table, "Search Patients")));
+        page.add(UIHelper.tableAlignedSection(UIHelper.tableSearchBar(table, "Search Administrators")));
         page.add(Box.createVerticalStrut(12));
         page.add(UIHelper.tableScrollPane(table, 380));
         content.add(UIHelper.scrollablePage(page), BorderLayout.CENTER);
@@ -73,28 +72,24 @@ public class AdminPatientsFrame extends JFrame {
         int row = 0;
 
         UIHelper.styleField(txtAccount);
-        UIHelper.styleField(txtDateOfBirth);
-        UIHelper.styleField(txtAddress);
-        UIHelper.styleField(txtEircode);
-        UIHelper.styleField(txtBloodType);
-        UIHelper.styleField(txtMedicalRecordNumber);
+        UIHelper.styleField(txtJobTitle);
+        UIHelper.styleField(txtEmployeeNum);
+        UIHelper.styleCombo(cmbDepartment);
         txtAccount.setEditable(false);
 
         UIHelper.addFormRow(form, gbc, row++, "Account", txtAccount);
-        UIHelper.addFormRow(form, gbc, row++, "Date of Birth (YYYY-MM-DD)", txtDateOfBirth);
-        UIHelper.addFormRow(form, gbc, row++, "Address", txtAddress);
-        UIHelper.addFormRow(form, gbc, row++, "Eircode", txtEircode);
-        UIHelper.addFormRow(form, gbc, row++, "Blood Type", txtBloodType);
-        UIHelper.addFormRow(form, gbc, row, "Medical Record No.", txtMedicalRecordNumber);
+        UIHelper.addFormRow(form, gbc, row++, "Job Title", txtJobTitle);
+        UIHelper.addFormRow(form, gbc, row++, "Employee Number", txtEmployeeNum);
+        UIHelper.addFormRow(form, gbc, row, "Department", cmbDepartment);
 
         JPanel buttons = UIHelper.actionBar();
         JButton update = UIHelper.actionButton("Update", HCS_Colors.BUTTON_BLUE);
-        update.addActionListener(e -> updatePatient());
+        update.addActionListener(e -> updateAdministrator());
         JButton delete = UIHelper.actionButton("Delete", HCS_Colors.ACCENT_RED);
-        delete.addActionListener(e -> deletePatient());
+        delete.addActionListener(e -> deleteAdministrator());
         JButton refresh = UIHelper.actionButton("Refresh", HCS_Colors.BUTTON_BLUE);
         refresh.addActionListener(e -> loadTable());
-        JButton view = UIHelper.detailsButton(this, table, "Patient Details");
+        JButton view = UIHelper.detailsButton(this, table, "Administrator Details");
         JButton close = UIHelper.secondaryButton("Back");
         close.addActionListener(e -> AppNavigator.replace(this, new AdminDashboard(adminAccount)));
 
@@ -109,10 +104,21 @@ public class AdminPatientsFrame extends JFrame {
         return shell;
     }
 
+    private void loadDepartments() {
+        try {
+            cmbDepartment.removeAllItems();
+            for (Map.Entry<Integer, String> entry : service.getDepartments().entrySet()) {
+                cmbDepartment.addItem(entry.getValue());
+            }
+        } catch (Exception ex) {
+            UIHelper.showError(this, ex);
+        }
+    }
+
     private void loadTable() {
         try {
-            table.setModel(service.getPatientsForManagement());
-            UIHelper.hideColumns(table, "patient_id");
+            table.setModel(service.getAdministratorsForManagement());
+            UIHelper.hideColumns(table, "admin_id");
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
@@ -120,45 +126,44 @@ public class AdminPatientsFrame extends JFrame {
 
     private void populateFromSelection() {
         try {
-            Patient patient = service.findPatientById(UIHelper.selectedId(table, "patient_id"));
-            if (patient == null) {
+            Administrator administrator = service.findAdministratorById(UIHelper.selectedId(table, "admin_id"));
+            if (administrator == null) {
                 return;
             }
 
-            Account account = service.findAccountById(patient.getAccountId());
+            Account account = service.findAccountById(administrator.getAccountId());
             txtAccount.setText(account == null
-                    ? "Account #" + patient.getAccountId()
+                    ? "Account #" + administrator.getAccountId()
                     : account.getFirstName() + " " + account.getLastName() + " (" + account.getEmail() + ")");
-            txtDateOfBirth.setText(patient.getDateOfBirth() == null ? "" : patient.getDateOfBirth().toString());
-            txtAddress.setText(patient.getAddress() == null ? "" : patient.getAddress());
-            txtEircode.setText(patient.getEircode() == null ? "" : patient.getEircode());
-            txtBloodType.setText(patient.getBloodType() == null ? "" : patient.getBloodType());
-            txtMedicalRecordNumber.setText(patient.getMedicalRecordNum() == null ? "" : patient.getMedicalRecordNum());
+            txtJobTitle.setText(administrator.getJobTitle() == null ? "" : administrator.getJobTitle());
+            txtEmployeeNum.setText(administrator.getEmployeeNum() == null ? "" : administrator.getEmployeeNum());
+            String departmentName = service.getDepartmentName(administrator.getDepId());
+            if (departmentName != null) {
+                cmbDepartment.setSelectedItem(departmentName);
+            }
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
     }
 
-    private void updatePatient() {
+    private void updateAdministrator() {
         try {
-            service.updatePatient(
-                    UIHelper.selectedId(table, "patient_id"),
-                    LocalDate.parse(txtDateOfBirth.getText().trim()),
-                    txtAddress.getText(),
-                    txtEircode.getText(),
-                    txtBloodType.getText(),
-                    txtMedicalRecordNumber.getText()
+            service.updateAdministrator(
+                    UIHelper.selectedId(table, "admin_id"),
+                    txtJobTitle.getText(),
+                    txtEmployeeNum.getText(),
+                    String.valueOf(cmbDepartment.getSelectedItem())
             );
             loadTable();
-            JOptionPane.showMessageDialog(this, "Patient updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Administrator updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
     }
 
-    private void deletePatient() {
+    private void deleteAdministrator() {
         try {
-            service.deletePatient(UIHelper.selectedId(table, "patient_id"));
+            service.deleteAdministrator(UIHelper.selectedId(table, "admin_id"));
             loadTable();
         } catch (Exception ex) {
             UIHelper.showError(this, ex);

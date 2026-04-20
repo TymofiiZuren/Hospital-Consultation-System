@@ -184,13 +184,18 @@ public class AppointmentService {
 
     public void updateAppointment(Integer appointmentId, Integer patientId, Integer doctorId,
                                   LocalDateTime date, String status, String medicalNeed) throws Exception {
-        updateAppointment(appointmentId, patientId, doctorId, date, status, medicalNeed, "");
+        updateAppointment(null, appointmentId, patientId, doctorId, date, status, medicalNeed, "");
     }
 
     public void updateAppointment(Integer appointmentId, Integer patientId, Integer doctorId,
                                   LocalDateTime date, String status, String medicalNeed, String consultationRoom) throws Exception {
+        updateAppointment(null, appointmentId, patientId, doctorId, date, status, medicalNeed, consultationRoom);
+    }
+
+    public void updateAppointment(Account actor, Integer appointmentId, Integer patientId, Integer doctorId,
+                                  LocalDateTime date, String status, String medicalNeed, String consultationRoom) throws Exception {
         Appointment existing = requireAppointment(appointmentId);
-        if (!isPendingStatus(existing.getStatus())) {
+        if (!canOverridePendingRestriction(actor) && !isPendingStatus(existing.getStatus())) {
             throw new ConflictException("Only pending appointments can be updated.");
         }
         validateAppointment(patientId, doctorId, date, status, medicalNeed);
@@ -562,6 +567,15 @@ public class AppointmentService {
 
     private boolean isPendingStatus(String status) {
         return status != null && STATUS_PENDING.equalsIgnoreCase(status.trim());
+    }
+
+    public boolean canManageRegardlessOfStatus(Account actor) {
+        return canOverridePendingRestriction(actor);
+    }
+
+    private boolean canOverridePendingRestriction(Account actor) {
+        return actor != null
+                && (Boolean.TRUE.equals(actor.isAdmin()) || Integer.valueOf(4).equals(actor.getRoleId()));
     }
 
     private boolean hasColumn(Connection conn, String columnName) throws Exception {
