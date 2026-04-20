@@ -17,6 +17,7 @@ public class Account {
     private String phone;
     private String gender;
     private Boolean isActive;
+    private Boolean isAdmin;
     private LocalDateTime createdAt;
 
     // creating empty Account constructor
@@ -26,6 +27,12 @@ public class Account {
     public Account(String email, String passwordHash, Integer roleId,
                    String lastName, String firstName, String ppsn, String phone,
                    String gender, Boolean isActive, LocalDateTime createdAt) {
+        this(email, passwordHash, roleId, lastName, firstName, ppsn, phone, gender, isActive, false, createdAt);
+    }
+
+    public Account(String email, String passwordHash, Integer roleId,
+                   String lastName, String firstName, String ppsn, String phone,
+                   String gender, Boolean isActive, Boolean isAdmin, LocalDateTime createdAt) {
         // implementing attributes
         this.email = email;
         this.passwordHash = passwordHash;
@@ -36,6 +43,7 @@ public class Account {
         this.phone = phone;
         this.gender = gender;
         this.isActive = isActive;
+        this.isAdmin = isAdmin;
         this.createdAt = createdAt;
     }
 
@@ -43,6 +51,12 @@ public class Account {
     public Account(Integer accountId, String email, String passwordHash, Integer roleId,
                    String lastName, String firstName, String ppsn, String phone,
                    String gender, Boolean isActive, LocalDateTime createdAt) {
+        this(accountId, email, passwordHash, roleId, lastName, firstName, ppsn, phone, gender, isActive, false, createdAt);
+    }
+
+    public Account(Integer accountId, String email, String passwordHash, Integer roleId,
+                   String lastName, String firstName, String ppsn, String phone,
+                   String gender, Boolean isActive, Boolean isAdmin, LocalDateTime createdAt) {
         // implementing attributes
         this.accountId = accountId;
         this.email = email;
@@ -54,6 +68,7 @@ public class Account {
         this.phone = phone;
         this.gender = gender;
         this.isActive = isActive;
+        this.isAdmin = isAdmin;
         this.createdAt = createdAt;
     }
 
@@ -105,6 +120,10 @@ public class Account {
     // creating getter for isActive
     public Boolean isActive() {
         return isActive;
+    }
+
+    public Boolean isAdmin() {
+        return isAdmin;
     }
 
     // creating getter for createdAt
@@ -162,6 +181,10 @@ public class Account {
         isActive = active;
     }
 
+    public void setAdmin(Boolean admin) {
+        isAdmin = admin;
+    }
+
     // creating setter for createdAt
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
@@ -175,6 +198,7 @@ public class Account {
                 "\nLast name: " + lastName +
                 "\nEmail: " + email +
                 "\nRole Id: " + roleId +
-                "\nActive: " + isActive;
+                "\nActive: " + isActive +
+                "\nAdmin: " + isAdmin;
     }
 }
