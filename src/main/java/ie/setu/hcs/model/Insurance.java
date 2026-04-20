@@ -13,6 +13,7 @@ public class Insurance {
     private String policyNum;
     private String status;
     private LocalDate expirationDate;
+    private String cardDocumentPath;
     
     // creating empty Insurance constructor
     public Insurance() {}
@@ -20,17 +21,30 @@ public class Insurance {
     // creating Insurance constructor with defining arguments
     public Insurance(Integer patientId, String providerName,
                      String policyNum, String status, LocalDate expirationDate) {
+        this(patientId, providerName, policyNum, status, expirationDate, null);
+    }
+
+    public Insurance(Integer patientId, String providerName,
+                     String policyNum, String status, LocalDate expirationDate,
+                     String cardDocumentPath) {
         // implementing attributes
         this.patientId = patientId;
         this.providerName = providerName;
         this.policyNum = policyNum;
         this.status = status;
         this.expirationDate = expirationDate;
+        this.cardDocumentPath = cardDocumentPath;
     }
 
     // creating Insurance constructor with defining arguments
     public Insurance(Integer insuranceId, Integer patientId, String providerName,
                      String policyNum, String status, LocalDate expirationDate) {
+        this(insuranceId, patientId, providerName, policyNum, status, expirationDate, null);
+    }
+
+    public Insurance(Integer insuranceId, Integer patientId, String providerName,
+                     String policyNum, String status, LocalDate expirationDate,
+                     String cardDocumentPath) {
         // implementing attributes
         this.insuranceId = insuranceId;
         this.patientId = patientId;
@@ -38,6 +52,7 @@ public class Insurance {
         this.policyNum = policyNum;
         this.status = status;
         this.expirationDate = expirationDate;
+        this.cardDocumentPath = cardDocumentPath;
     }
 
     // creating getter for insuranceId
@@ -95,9 +110,17 @@ public class Insurance {
         return expirationDate;
     }
 
+    public String getCardDocumentPath() {
+        return cardDocumentPath;
+    }
+
     // creating setter for expirationDate
     public void setExpirationDate(LocalDate expirationDate) {
         this.expirationDate = expirationDate;
+    }
+
+    public void setCardDocumentPath(String cardDocumentPath) {
+        this.cardDocumentPath = cardDocumentPath;
     }
 
     // implementing the toString method
@@ -107,7 +130,8 @@ public class Insurance {
                 "Patient Id: " + patientId +
                 "Provider Name: " + providerName +
                 "Policy Num: " +  policyNum +
-                "Expiration Date: " + expirationDate;
+                "Expiration Date: " + expirationDate +
+                "Card Document Path: " + cardDocumentPath;
     }
 
 }

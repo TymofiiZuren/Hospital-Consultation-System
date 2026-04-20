@@ -103,7 +103,7 @@ public class PatientDAOImpl implements PatientDAO {
                                         address = ?,
                                         eircode = ?,
                                         blood_type = ?,
-                                        medical_record_num = ?
+                                        medical_record_number = ?
                                   WHERE patient_id = ?
                 """;
 
@@ -185,7 +185,7 @@ public class PatientDAOImpl implements PatientDAO {
 
         // creating sql variable with sql statement
         String sql =
-                "SELECT * FROM patients WHERE medical_record_num = ?";
+                "SELECT * FROM patients WHERE medical_record_number = ?";
 
         // validate connection
         // setting up connection with database
@@ -250,7 +250,7 @@ public class PatientDAOImpl implements PatientDAO {
 
         // mapping medical record number to an object
         patient.setMedicalRecordNum(
-                rs.getString("medical_record_num"));
+                rs.getString("medical_record_number"));
 
         // returning the patient information
         return patient;

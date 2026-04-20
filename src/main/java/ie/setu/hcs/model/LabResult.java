@@ -9,6 +9,7 @@ public class LabResult {
     // defining attributes of the class
     private Integer labResultId;
     private Integer consultationId;
+    private Integer appointmentId;
     private Integer technicianId;
     private String testType;
     private String result;
@@ -20,20 +21,26 @@ public class LabResult {
     // creating LabResult constructor with defining arguments
     public LabResult(Integer consultationId, Integer technicianId,
                      String testType, String result, LocalDateTime uploadedAt) {
+        this(consultationId, null, technicianId, testType, result, uploadedAt);
+    }
+
+    public LabResult(Integer consultationId, Integer appointmentId, Integer technicianId,
+                     String testType, String result, LocalDateTime uploadedAt) {
         // implementing attributes
         this.consultationId = consultationId;
+        this.appointmentId = appointmentId;
         this.technicianId = technicianId;
         this.testType = testType;
         this.result = result;
         this.uploadedAt = uploadedAt;
     }
 
-    // creating LabResult constructor with defining arguments
-    public LabResult(Integer labResultId, Integer consultationId, Integer technicianId,
+    public LabResult(Integer labResultId, Integer consultationId, Integer appointmentId, Integer technicianId,
                      String testType, String result, LocalDateTime uploadedAt) {
         // implementing attributes
         this.labResultId = labResultId;
         this.consultationId = consultationId;
+        this.appointmentId = appointmentId;
         this.technicianId = technicianId;
         this.testType = testType;
         this.result = result;
@@ -55,9 +62,17 @@ public class LabResult {
         return consultationId;
     }
 
+    public Integer getAppointmentId() {
+        return appointmentId;
+    }
+
     // creating setter for consultationId
     public void setConsultationId(Integer consultationId) {
         this.consultationId = consultationId;
+    }
+
+    public void setAppointmentId(Integer appointmentId) {
+        this.appointmentId = appointmentId;
     }
 
     // creating getter for technicianId
@@ -105,7 +120,7 @@ public class LabResult {
     public String toString() {
         return "\nTechnician Id: " + technicianId +
                 "\nConsultation Id: " + consultationId +
-                "\nTechnician Id: " + technicianId +
+                "\nAppointment Id: " + appointmentId +
                 "\nTest Type: " + testType +
                 "\nUploaded At: " + uploadedAt;
     }

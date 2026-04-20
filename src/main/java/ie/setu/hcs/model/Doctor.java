@@ -7,7 +7,7 @@ public class Doctor {
     private Integer doctorId;
     private Integer accountId;
     private String specialization;
-    private Integer licenseNum;
+    private String licenseNum;
     private Integer yearsOfExperience;
     private Integer consultationFee;
     private Integer depId;
@@ -17,7 +17,7 @@ public class Doctor {
 
     // creating Doctor constructor with defining arguments
     public Doctor(Integer accountId, String specialization,
-                  Integer licenseNum, Integer yearsOfExperience, Integer consultationFee,
+                  String licenseNum, Integer yearsOfExperience, Integer consultationFee,
                   Integer depId) {
         // implementing attributes
         this.accountId = accountId;
@@ -30,7 +30,7 @@ public class Doctor {
 
     // creating Doctor constructor with defining arguments
     public Doctor(Integer doctorId, Integer accountId, String specialization,
-                  Integer licenseNum, Integer yearsOfExperience, Integer consultationFee,
+                  String licenseNum, Integer yearsOfExperience, Integer consultationFee,
                   Integer depId) {
         // implementing attributes
         this.doctorId = doctorId;
@@ -58,7 +58,7 @@ public class Doctor {
     }
 
     // creating getter for licenseNum
-    public Integer getLicenseNum() {
+    public String getLicenseNum() {
         return licenseNum;
     }
 
@@ -93,7 +93,7 @@ public class Doctor {
     }
 
     // creating setter for licenseNum
-    public void setLicenseNum(Integer licenseNum) {
+    public void setLicenseNum(String licenseNum) {
         this.licenseNum = licenseNum;
     }
 
