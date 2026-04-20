@@ -29,7 +29,7 @@ public class DoctorDAOImpl implements DoctorDAO {
             // inserting arguments into the query statement
             pstmt.setInt(1, doctor.getAccountId());
             pstmt.setString(2, doctor.getSpecialization());
-            pstmt.setInt(3, doctor.getLicenseNum());
+            pstmt.setString(3, doctor.getLicenseNum());
             pstmt.setInt(4, doctor.getYearsOfExperience());
             pstmt.setInt(5, doctor.getConsultationFee());
             pstmt.setInt(6, doctor.getDepId());
@@ -116,7 +116,7 @@ public class DoctorDAOImpl implements DoctorDAO {
             // inserting arguments into the query statement
             pstmt.setInt(1, doctor.getAccountId());
             pstmt.setString(2, doctor.getSpecialization());
-            pstmt.setInt(3, doctor.getLicenseNum());
+            pstmt.setString(3, doctor.getLicenseNum());
             pstmt.setInt(4, doctor.getYearsOfExperience());
             pstmt.setInt(5, doctor.getConsultationFee());
             pstmt.setInt(6, doctor.getDepId());
@@ -241,7 +241,7 @@ public class DoctorDAOImpl implements DoctorDAO {
 
         // mapping license number to an object
         doctor.setLicenseNum(
-                rs.getInt("license_num"));
+                rs.getString("license_number"));
 
         // mapping years of experience to an object
         doctor.setYearsOfExperience(
