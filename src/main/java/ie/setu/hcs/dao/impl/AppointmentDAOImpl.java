@@ -17,7 +17,8 @@ public class AppointmentDAOImpl implements AppointmentDAO {
     public void save(Appointment appointment) throws SQLException {
         // creating sql variable with sql statement
         String sql = """
-                INSERT INTO appointments (patient_id, doctor_id, appointment_datetime, status) VALUES (?, ?, ?, ?)
+                INSERT INTO appointments (patient_id, doctor_id, appointment_datetime, status, medical_need, consultation_room)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
         // validating connection
@@ -25,11 +26,14 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, appointment.getPatientId());
             pstmt.setInt(2, appointment.getDoctorId());
             pstmt.setTimestamp(3, Timestamp.valueOf(appointment.getDate()));
             pstmt.setString(4, appointment.getStatus());
+            pstmt.setString(5, appointment.getMedicalNeed());
+            pstmt.setString(6, appointment.getConsultationRoom());
 
             // executing the query in the database
             pstmt.executeUpdate();
@@ -55,6 +59,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -85,6 +90,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         try (Connection conn = DatabaseConfig.getConnection();
         PreparedStatement pstmt = conn.prepareStatement(sql);
         ResultSet rs = pstmt.executeQuery()) {
+            ensureOptionalColumns(conn);
 
             // returning the model from query
             return TableModelUtil.buildTableModel(rs);
@@ -114,6 +120,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, patientId);
@@ -134,7 +141,9 @@ public class AppointmentDAOImpl implements AppointmentDAO {
                 UPDATE appointments SET patient_id = ?,
                                         doctor_id = ?,
                                         appointment_datetime = ?,
-                                        status = ?
+                                        status = ?,
+                                        medical_need = ?,
+                                        consultation_room = ?
                                   WHERE appointment_id = ?
                 """;
 
@@ -143,12 +152,15 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, appointment.getPatientId());
             pstmt.setInt(2, appointment.getDoctorId());
             pstmt.setTimestamp(3, Timestamp.valueOf(appointment.getDate()));
             pstmt.setString(4, appointment.getStatus());
-            pstmt.setInt(5, appointment.getAppointmentId());
+            pstmt.setString(5, appointment.getMedicalNeed());
+            pstmt.setString(6, appointment.getConsultationRoom());
+            pstmt.setInt(7, appointment.getAppointmentId());
 
             // execute the query
             pstmt.executeUpdate();
@@ -189,6 +201,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps =
                      conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, patientId);
@@ -216,6 +229,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps =
                      conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, doctorId);
@@ -243,6 +257,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps =
                      conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
 
             // inserting arguments into the query statement
             ps.setString(1, status);
@@ -271,6 +286,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps =
                      conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
 
             // inserting arguments into the query statement
             ps.setString(1, status);
@@ -316,7 +332,40 @@ public class AppointmentDAOImpl implements AppointmentDAO {
         appointment.setStatus(
                 rs.getString("status"));
 
+        // mapping medical need to an object
+        appointment.setMedicalNeed(
+                rs.getString("medical_need"));
+
+        // mapping consultation room to an object
+        appointment.setConsultationRoom(
+                rs.getString("consultation_room"));
+
         // returning the appointment information
         return appointment;
+    }
+
+    private void ensureOptionalColumns(Connection conn) throws SQLException {
+        ensureColumn(conn, "medical_need", "ALTER TABLE appointments ADD COLUMN medical_need TEXT NULL");
+        ensureColumn(conn, "consultation_room", "ALTER TABLE appointments ADD COLUMN consultation_room VARCHAR(120) NULL");
+    }
+
+    private void ensureColumn(Connection conn, String columnName, String alterSql) throws SQLException {
+        if (hasColumn(conn, columnName)) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(alterSql);
+        } catch (SQLException ex) {
+            if (!hasColumn(conn, columnName)) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String columnName) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "appointments", columnName)) {
+            return columns.next();
+        }
     }
 }
