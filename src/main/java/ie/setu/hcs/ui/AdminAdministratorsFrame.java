@@ -85,8 +85,6 @@ public class AdminAdministratorsFrame extends JFrame {
         JPanel buttons = UIHelper.actionBar();
         JButton update = UIHelper.actionButton("Update", HCS_Colors.BUTTON_BLUE);
         update.addActionListener(e -> updateAdministrator());
-        JButton delete = UIHelper.actionButton("Delete", HCS_Colors.ACCENT_RED);
-        delete.addActionListener(e -> deleteAdministrator());
         JButton refresh = UIHelper.actionButton("Refresh", HCS_Colors.BUTTON_BLUE);
         refresh.addActionListener(e -> loadTable());
         JButton view = UIHelper.detailsButton(this, table, "Administrator Details");
@@ -94,7 +92,6 @@ public class AdminAdministratorsFrame extends JFrame {
         close.addActionListener(e -> AppNavigator.replace(this, new AdminDashboard(adminAccount)));
 
         buttons.add(update);
-        buttons.add(delete);
         buttons.add(refresh);
         buttons.add(view);
         buttons.add(close);
@@ -161,12 +158,4 @@ public class AdminAdministratorsFrame extends JFrame {
         }
     }
 
-    private void deleteAdministrator() {
-        try {
-            service.deleteAdministrator(UIHelper.selectedId(table, "admin_id"));
-            loadTable();
-        } catch (Exception ex) {
-            UIHelper.showError(this, ex);
-        }
-    }
 }

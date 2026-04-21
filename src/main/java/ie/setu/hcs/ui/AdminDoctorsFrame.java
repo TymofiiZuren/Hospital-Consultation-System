@@ -94,8 +94,6 @@ public class AdminDoctorsFrame extends JFrame {
         JPanel buttons = UIHelper.actionBar();
         JButton update = UIHelper.actionButton("Update", HCS_Colors.BUTTON_BLUE);
         update.addActionListener(e -> updateDoctor());
-        JButton delete = UIHelper.actionButton("Delete", HCS_Colors.ACCENT_RED);
-        delete.addActionListener(e -> deleteDoctor());
         JButton refresh = UIHelper.actionButton("Refresh", HCS_Colors.BUTTON_BLUE);
         refresh.addActionListener(e -> loadTable());
         JButton view = UIHelper.detailsButton(this, table, "Doctor Details");
@@ -103,7 +101,6 @@ public class AdminDoctorsFrame extends JFrame {
         close.addActionListener(e -> AppNavigator.replace(this, new AdminDashboard(adminAccount)));
 
         buttons.add(update);
-        buttons.add(delete);
         buttons.add(refresh);
         buttons.add(view);
         buttons.add(close);
@@ -160,15 +157,6 @@ public class AdminDoctorsFrame extends JFrame {
             );
             loadTable();
             JOptionPane.showMessageDialog(this, "Doctor updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception ex) {
-            UIHelper.showError(this, ex);
-        }
-    }
-
-    private void deleteDoctor() {
-        try {
-            service.deleteDoctor(UIHelper.selectedId(table, "doctor_id"));
-            loadTable();
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
