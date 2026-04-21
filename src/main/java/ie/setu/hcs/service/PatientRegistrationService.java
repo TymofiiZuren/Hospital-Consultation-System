@@ -68,7 +68,6 @@ public class PatientRegistrationService {
                 true,
                 LocalDateTime.now()
         );
-        account.setAdmin(false);
 
         try {
             Patient patient = new Patient(

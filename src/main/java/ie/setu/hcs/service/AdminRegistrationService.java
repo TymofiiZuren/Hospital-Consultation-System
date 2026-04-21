@@ -59,7 +59,6 @@ public class AdminRegistrationService {
                 true,
                 LocalDateTime.now()
         );
-        account.setAdmin(true);
 
         try {
             Integer depId = departmentDAO.findByName(department);

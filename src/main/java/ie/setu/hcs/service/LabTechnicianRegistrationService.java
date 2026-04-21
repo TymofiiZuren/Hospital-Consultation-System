@@ -57,7 +57,6 @@ public class LabTechnicianRegistrationService {
                 true,
                 LocalDateTime.now()
         );
-        account.setAdmin(false);
 
         try {
             LabTechnician technician = new LabTechnician(

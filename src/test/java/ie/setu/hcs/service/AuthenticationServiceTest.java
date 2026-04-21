@@ -76,7 +76,6 @@ class AuthenticationServiceTest {
                 "0871234567",
                 "Male",
                 active,
-                false,
                 LocalDateTime.now()
         );
         account.setActive(active);

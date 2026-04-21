@@ -94,7 +94,7 @@ public class ProfileFrame extends JFrame {
     }
 
     private JFrame backFrame() {
-        if (Boolean.TRUE.equals(account.isAdmin()) || Integer.valueOf(4).equals(account.getRoleId())) {
+        if (Integer.valueOf(4).equals(account.getRoleId())) {
             return new AdminDashboard(account);
         }
 
@@ -107,7 +107,7 @@ public class ProfileFrame extends JFrame {
     }
 
     private String roleName() {
-        if (Boolean.TRUE.equals(account.isAdmin()) || Integer.valueOf(4).equals(account.getRoleId())) {
+        if (Integer.valueOf(4).equals(account.getRoleId())) {
             return "Administrator";
         }
 
