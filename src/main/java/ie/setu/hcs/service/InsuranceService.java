@@ -42,6 +42,7 @@ public class InsuranceService {
                        i.expiration_date
                 FROM insurance i
                 WHERE i.patient_id = ?
+                  AND COALESCE(i.delete_flag, FALSE) = FALSE
                 ORDER BY i.expiration_date DESC
                 """;
         return displayInsurance(sql, patient.getPatientId());
@@ -58,11 +59,12 @@ public class InsuranceService {
                 FROM insurance i
                 JOIN patients p ON i.patient_id = p.patient_id
                 JOIN accounts a ON p.account_id = a.account_id
+                WHERE COALESCE(i.delete_flag, FALSE) = FALSE
                 ORDER BY i.expiration_date DESC
                 """;
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
+             PreparedStatement ps = prepareInsuranceQuery(conn, sql);
              ResultSet rs = ps.executeQuery()) {
             return TableModelUtil.buildTableModel(rs);
         }
@@ -282,7 +284,7 @@ public class InsuranceService {
 
     private boolean canOverridePendingRestriction(Account actor) {
         return actor != null
-                && (Boolean.TRUE.equals(actor.isAdmin()) || Integer.valueOf(4).equals(actor.getRoleId()));
+                && Integer.valueOf(4).equals(actor.getRoleId());
     }
 
     private Insurance requireInsurance(Integer insuranceId) throws Exception {
@@ -298,11 +300,36 @@ public class InsuranceService {
 
     private DefaultTableModel displayInsurance(String sql, Integer patientId) throws Exception {
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = prepareInsuranceQuery(conn, sql)) {
             ps.setInt(1, patientId);
             try (ResultSet rs = ps.executeQuery()) {
                 return TableModelUtil.buildTableModel(rs);
             }
+        }
+    }
+
+    private PreparedStatement prepareInsuranceQuery(Connection conn, String sql) throws Exception {
+        ensureDeleteFlagColumn(conn);
+        return conn.prepareStatement(sql);
+    }
+
+    private void ensureDeleteFlagColumn(Connection conn) throws Exception {
+        if (hasColumn(conn, "delete_flag")) {
+            return;
+        }
+
+        try (var stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE insurance ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        } catch (Exception ex) {
+            if (!hasColumn(conn, "delete_flag")) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String columnName) throws Exception {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "insurance", columnName)) {
+            return columns.next();
         }
     }
 }

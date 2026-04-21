@@ -41,7 +41,6 @@ public class AdminService {
     }
 
     public DefaultTableModel getAccountsForManagement() throws Exception {
-        ensureAdminColumn();
         String sql = """
                 SELECT account_id,
                        first_name,
@@ -57,8 +56,7 @@ public class AdminService {
                        ppsn,
                        phone,
                        gender,
-                       is_active,
-                       is_admin
+                       is_active
                 FROM accounts
                 ORDER BY last_name, first_name
                 """;
@@ -144,8 +142,7 @@ public class AdminService {
                        ad.job_title,
                        ad.employee_num,
                        COALESCE(dep.name, '') AS department,
-                       a.is_active,
-                       a.is_admin
+                       a.is_active
                 FROM administrators ad
                 JOIN accounts a ON ad.account_id = a.account_id
                 LEFT JOIN departments dep ON ad.dep_id = dep.dep_id
@@ -169,7 +166,7 @@ public class AdminService {
     }
 
     public void updateAccount(Integer accountId, String email, String firstName, String lastName,
-                              String ppsn, String phone, String gender, Boolean isActive, Boolean isAdmin) throws Exception {
+                              String ppsn, String phone, String gender, Boolean isActive) throws Exception {
         Account existing = requireAccount(accountId);
         String normalizedEmail = InputValidationUtil.requireEmail(email);
         String normalizedFirstName = InputValidationUtil.requireNonBlank(firstName, "First name");
@@ -182,7 +179,6 @@ public class AdminService {
         existing.setPhone(blankToNull(InputValidationUtil.optionalTrim(phone)));
         existing.setGender(blankToNull(InputValidationUtil.optionalTrim(gender)));
         existing.setActive(Boolean.TRUE.equals(isActive));
-        existing.setAdmin(Boolean.TRUE.equals(isAdmin));
         accountDAO.update(existing);
     }
 
@@ -297,28 +293,6 @@ public class AdminService {
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             return TableModelUtil.buildTableModel(rs);
-        }
-    }
-
-    private void ensureAdminColumn() throws Exception {
-        try (Connection conn = DatabaseConfig.getConnection();
-             ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "accounts", "is_admin")) {
-            if (columns.next()) {
-                return;
-            }
-        }
-
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement("ALTER TABLE accounts ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE")) {
-            ps.executeUpdate();
-        } catch (Exception ex) {
-            try (Connection conn = DatabaseConfig.getConnection();
-                 ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "accounts", "is_admin")) {
-                if (columns.next()) {
-                    return;
-                }
-            }
-            throw ex;
         }
     }
 

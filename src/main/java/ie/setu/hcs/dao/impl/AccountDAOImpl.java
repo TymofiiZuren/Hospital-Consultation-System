@@ -23,15 +23,14 @@ public class AccountDAOImpl implements AccountDAO {
     public void save(Connection conn, Account account) throws SQLException {
         // creating sql variable with sql statement
         String sql = """
-                INSERT INTO accounts (email, password_hash, role_id, last_name, first_name, ppsn, phone, gender, is_active, created_at, is_admin)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO accounts (email, password_hash, role_id, last_name, first_name, ppsn, phone, gender, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         // validating connection
         // setting up connection with the database
         // creating PreparedStatement
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ensureAdminColumn(conn);
             // inserting arguments into the query statement
             pstmt.setString(1, account.getEmail());
             pstmt.setString(2, account.getPasswordHash());
@@ -43,7 +42,6 @@ public class AccountDAOImpl implements AccountDAO {
             pstmt.setString(8, account.getGender());
             pstmt.setBoolean(9, account.isActive());
             pstmt.setTimestamp(10, Timestamp.valueOf(account.getCreatedAt()));
-            pstmt.setBoolean(11, Boolean.TRUE.equals(account.isAdmin()));
 
             // executing the query in the database
             pstmt.executeUpdate();
@@ -69,7 +67,6 @@ public class AccountDAOImpl implements AccountDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureAdminColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -100,8 +97,6 @@ public class AccountDAOImpl implements AccountDAO {
         try (Connection conn = DatabaseConfig.getConnection();
         PreparedStatement pstmt = conn.prepareStatement(sql);
         ResultSet rs = pstmt.executeQuery()) {
-            ensureAdminColumn(conn);
-
             // returning the model from query
             return TableModelUtil.buildTableModel(rs);
         }
@@ -121,8 +116,7 @@ public class AccountDAOImpl implements AccountDAO {
                                     phone = ?,
                                     gender = ?,
                                     is_active = ?,
-                                    created_at = ?,
-                                    is_admin = ?
+                                    created_at = ?
                               WHERE account_id = ?
                 """;
 
@@ -131,7 +125,6 @@ public class AccountDAOImpl implements AccountDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureAdminColumn(conn);
             // inserting arguments into the query statement
             pstmt.setString(1, account.getEmail());
             pstmt.setString(2, account.getPasswordHash());
@@ -143,8 +136,7 @@ public class AccountDAOImpl implements AccountDAO {
             pstmt.setString(8, account.getGender());
             pstmt.setBoolean(9, account.isActive());
             pstmt.setTimestamp(10, Timestamp.valueOf(account.getCreatedAt()));
-            pstmt.setBoolean(11, Boolean.TRUE.equals(account.isAdmin()));
-            pstmt.setInt(12, account.getAccountId());
+            pstmt.setInt(11, account.getAccountId());
 
             // execute the query
             pstmt.executeUpdate();
@@ -186,7 +178,6 @@ public class AccountDAOImpl implements AccountDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureAdminColumn(conn);
             // inserting arguments into the query statement
             pstmt.setString(1, email);
 
@@ -215,7 +206,6 @@ public class AccountDAOImpl implements AccountDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureAdminColumn(conn);
             // inserting arguments into the query statement
             pstmt.setString(1, email);
 
@@ -244,8 +234,6 @@ public class AccountDAOImpl implements AccountDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ensureAdminColumn(conn);
-
             // inserting arguments into the query statement
             ps.setInt(1, roleId);
 
@@ -323,10 +311,6 @@ public class AccountDAOImpl implements AccountDAO {
         account.setActive(
                 rs.getBoolean("is_active"));
 
-        // mapping is_admin to an object
-        account.setAdmin(
-                rs.getBoolean("is_admin"));
-
         // taking timestamp from the result set
         Timestamp timestamp =
                 rs.getTimestamp("created_at");
@@ -340,25 +324,5 @@ public class AccountDAOImpl implements AccountDAO {
 
         // returning the account information
         return account;
-    }
-
-    private void ensureAdminColumn(Connection conn) throws SQLException {
-        if (hasColumn(conn, "is_admin")) {
-            return;
-        }
-
-        try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE accounts ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE");
-        } catch (SQLException ex) {
-            if (!hasColumn(conn, "is_admin")) {
-                throw ex;
-            }
-        }
-    }
-
-    private boolean hasColumn(Connection conn, String columnName) throws SQLException {
-        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "accounts", columnName)) {
-            return columns.next();
-        }
     }
 }

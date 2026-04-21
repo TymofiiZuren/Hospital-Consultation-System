@@ -100,8 +100,6 @@ public class AdminLabTechniciansFrame extends JFrame {
         JPanel buttons = UIHelper.actionBar();
         JButton update = UIHelper.actionButton("Update", HCS_Colors.BUTTON_BLUE);
         update.addActionListener(e -> updateTechnician());
-        JButton delete = UIHelper.actionButton("Delete", HCS_Colors.ACCENT_RED);
-        delete.addActionListener(e -> deleteTechnician());
         JButton refresh = UIHelper.actionButton("Refresh", HCS_Colors.BUTTON_BLUE);
         refresh.addActionListener(e -> loadTable());
         JButton view = UIHelper.detailsButton(this, table, "Lab Technician Details");
@@ -109,7 +107,6 @@ public class AdminLabTechniciansFrame extends JFrame {
         close.addActionListener(e -> AppNavigator.replace(this, new AdminDashboard(adminAccount)));
 
         buttons.add(update);
-        buttons.add(delete);
         buttons.add(refresh);
         buttons.add(view);
         buttons.add(close);
@@ -164,12 +161,4 @@ public class AdminLabTechniciansFrame extends JFrame {
         }
     }
 
-    private void deleteTechnician() {
-        try {
-            service.deleteTechnician(UIHelper.selectedId(table, "technician_id"));
-            loadTable();
-        } catch (Exception ex) {
-            UIHelper.showError(this, ex);
-        }
-    }
 }

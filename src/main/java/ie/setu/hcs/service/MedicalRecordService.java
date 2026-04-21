@@ -37,6 +37,8 @@ public class MedicalRecordService {
                 FROM medical_records mr
                 JOIN consultation c ON mr.consultation_id = c.consultation_id
                 WHERE mr.patient_id = ?
+                  AND COALESCE(mr.delete_flag, FALSE) = FALSE
+                  AND COALESCE(c.delete_flag, FALSE) = FALSE
                 ORDER BY mr.created_at DESC
                 """;
         return loadRecords(sql, patient.getPatientId());
@@ -56,6 +58,8 @@ public class MedicalRecordService {
                 JOIN consultation c ON mr.consultation_id = c.consultation_id
                 LEFT JOIN patients p ON mr.patient_id = p.patient_id
                 LEFT JOIN accounts a ON p.account_id = a.account_id
+                WHERE COALESCE(mr.delete_flag, FALSE) = FALSE
+                  AND COALESCE(c.delete_flag, FALSE) = FALSE
                 ORDER BY mr.created_at DESC
                 """;
         return loadRecords(sql, null);
@@ -78,6 +82,9 @@ public class MedicalRecordService {
                 LEFT JOIN patients p ON mr.patient_id = p.patient_id
                 LEFT JOIN accounts a ON p.account_id = a.account_id
                 WHERE ap.doctor_id = ?
+                  AND COALESCE(mr.delete_flag, FALSE) = FALSE
+                  AND COALESCE(c.delete_flag, FALSE) = FALSE
+                  AND COALESCE(ap.delete_flag, FALSE) = FALSE
                 ORDER BY mr.created_at DESC
                 """;
 
@@ -119,13 +126,40 @@ public class MedicalRecordService {
 
     private DefaultTableModel loadRecords(String sql, Integer parameter) throws Exception {
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = prepareRecordsQuery(conn, sql)) {
             if (parameter != null) {
                 ps.setInt(1, parameter);
             }
             try (ResultSet rs = ps.executeQuery()) {
                 return TableModelUtil.buildTableModel(rs);
             }
+        }
+    }
+
+    private PreparedStatement prepareRecordsQuery(Connection conn, String sql) throws Exception {
+        ensureDeleteFlagColumn(conn, "medical_records");
+        ensureDeleteFlagColumn(conn, "consultation");
+        ensureDeleteFlagColumn(conn, "appointments");
+        return conn.prepareStatement(sql);
+    }
+
+    private void ensureDeleteFlagColumn(Connection conn, String tableName) throws Exception {
+        if (hasColumn(conn, tableName, "delete_flag")) {
+            return;
+        }
+
+        try (var stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE " + tableName + " ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        } catch (Exception ex) {
+            if (!hasColumn(conn, tableName, "delete_flag")) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String tableName, String columnName) throws Exception {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, tableName, columnName)) {
+            return columns.next();
         }
     }
 }

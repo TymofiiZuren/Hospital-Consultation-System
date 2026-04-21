@@ -62,11 +62,13 @@ public class ConsultationService {
                 FROM consultation c
                 JOIN appointments a ON c.appointment_id = a.appointment_id
                 WHERE a.patient_id = ?
+                  AND COALESCE(c.delete_flag, FALSE) = FALSE
+                  AND COALESCE(a.delete_flag, FALSE) = FALSE
                 ORDER BY c.created_at DESC
                 """.formatted(appointmentDisplaySql());
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = prepareConsultationQuery(conn, sql)) {
             ps.setInt(1, patient.getPatientId());
             try (ResultSet rs = ps.executeQuery()) {
                 return TableModelUtil.buildTableModel(rs);
@@ -89,11 +91,13 @@ public class ConsultationService {
                 JOIN patients p ON a.patient_id = p.patient_id
                 JOIN accounts pa ON p.account_id = pa.account_id
                 WHERE a.doctor_id = ?
+                  AND COALESCE(c.delete_flag, FALSE) = FALSE
+                  AND COALESCE(a.delete_flag, FALSE) = FALSE
                 ORDER BY c.created_at DESC
                 """.formatted(appointmentDisplaySql());
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = prepareConsultationQuery(conn, sql)) {
             ps.setInt(1, doctor.getDoctorId());
             try (ResultSet rs = ps.executeQuery()) {
                 return TableModelUtil.buildTableModel(rs);
@@ -117,11 +121,13 @@ public class ConsultationService {
                 JOIN accounts pa ON p.account_id = pa.account_id
                 JOIN doctors d ON a.doctor_id = d.doctor_id
                 JOIN accounts da ON d.account_id = da.account_id
+                WHERE COALESCE(c.delete_flag, FALSE) = FALSE
+                  AND COALESCE(a.delete_flag, FALSE) = FALSE
                 ORDER BY c.created_at DESC
                 """.formatted(appointmentDisplaySql());
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
+             PreparedStatement ps = prepareConsultationQuery(conn, sql);
              ResultSet rs = ps.executeQuery()) {
             return TableModelUtil.buildTableModel(rs);
         }
@@ -138,6 +144,7 @@ public class ConsultationService {
                 JOIN patients p ON ap.patient_id = p.patient_id
                 JOIN accounts pa ON p.account_id = pa.account_id
                 WHERE ap.doctor_id = ?
+                  AND COALESCE(ap.delete_flag, FALSE) = FALSE
                 ORDER BY ap.appointment_datetime DESC
                 """;
         return appointmentOptionsFromTable(loadAppointmentOptions(sql, doctor.getDoctorId()));
@@ -155,6 +162,7 @@ public class ConsultationService {
                 JOIN accounts pa ON p.account_id = pa.account_id
                 JOIN doctors d ON ap.doctor_id = d.doctor_id
                 JOIN accounts da ON d.account_id = da.account_id
+                WHERE COALESCE(ap.delete_flag, FALSE) = FALSE
                 ORDER BY ap.appointment_datetime DESC
                 """;
         return appointmentOptionsFromTable(loadAppointmentOptions(sql, null));
@@ -180,6 +188,7 @@ public class ConsultationService {
         LocalDateTime now = LocalDateTime.now();
 
         return TransactionRunner.inTransaction(conn -> {
+            ensureSoftDeleteColumns(conn);
             Consultation existing = findConsultationByAppointmentId(conn, appointmentId);
             Integer consultationId;
 
@@ -226,6 +235,7 @@ public class ConsultationService {
         }
 
         TransactionRunner.inTransaction(conn -> {
+            ensureSoftDeleteColumns(conn);
             deleteByConsultationId(conn, "lab_results", "consultation_id", consultationId);
             deleteByConsultationId(conn, "invoices", "consultation_id", consultationId);
             deleteByConsultationId(conn, "medical_records", "consultation_id", consultationId);
@@ -412,7 +422,7 @@ public class ConsultationService {
 
     private DefaultTableModel loadAppointmentOptions(String sql, Integer doctorId) throws Exception {
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = prepareConsultationQuery(conn, sql)) {
             if (doctorId != null) {
                 ps.setInt(1, doctorId);
             }
@@ -435,7 +445,11 @@ public class ConsultationService {
     }
 
     private Consultation findConsultationByAppointmentId(Connection conn, Integer appointmentId) throws SQLException {
-        String sql = "SELECT * FROM consultation WHERE appointment_id = ?";
+        String sql = """
+                SELECT * FROM consultation
+                WHERE appointment_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, appointmentId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -486,7 +500,12 @@ public class ConsultationService {
     }
 
     private void deleteConsultation(Connection conn, Integer consultationId) throws SQLException {
-        String sql = "DELETE FROM consultation WHERE consultation_id = ?";
+        String sql = """
+                UPDATE consultation
+                SET delete_flag = TRUE
+                WHERE consultation_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, consultationId);
             ps.executeUpdate();
@@ -494,7 +513,12 @@ public class ConsultationService {
     }
 
     private MedicalRecord findMedicalRecordByConsultationId(Connection conn, Integer consultationId) throws SQLException {
-        String sql = "SELECT * FROM medical_records WHERE consultation_id = ? LIMIT 1";
+        String sql = """
+                SELECT * FROM medical_records
+                WHERE consultation_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                LIMIT 1
+                """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, consultationId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -539,7 +563,12 @@ public class ConsultationService {
     }
 
     private Invoice findInvoiceByConsultationId(Connection conn, Integer consultationId) throws SQLException {
-        String sql = "SELECT * FROM invoices WHERE consultation_id = ? LIMIT 1";
+        String sql = """
+                SELECT * FROM invoices
+                WHERE consultation_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                LIMIT 1
+                """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, consultationId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -597,10 +626,49 @@ public class ConsultationService {
     }
 
     private void deleteByConsultationId(Connection conn, String tableName, String columnName, Integer consultationId) throws SQLException {
-        String sql = "DELETE FROM " + tableName + " WHERE " + columnName + " = ?";
+        String sql = "UPDATE " + tableName + " SET delete_flag = TRUE WHERE " + columnName
+                + " = ? AND COALESCE(delete_flag, FALSE) = FALSE";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, consultationId);
             ps.executeUpdate();
+        }
+    }
+
+    private PreparedStatement prepareConsultationQuery(Connection conn, String sql) throws SQLException {
+        ensureSoftDeleteColumns(conn);
+        return conn.prepareStatement(sql);
+    }
+
+    private void ensureSoftDeleteColumns(Connection conn) throws SQLException {
+        ensureColumn(conn, "appointments", "delete_flag",
+                "ALTER TABLE appointments ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        ensureColumn(conn, "consultation", "delete_flag",
+                "ALTER TABLE consultation ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        ensureColumn(conn, "medical_records", "delete_flag",
+                "ALTER TABLE medical_records ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        ensureColumn(conn, "invoices", "delete_flag",
+                "ALTER TABLE invoices ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        ensureColumn(conn, "lab_results", "delete_flag",
+                "ALTER TABLE lab_results ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+    }
+
+    private void ensureColumn(Connection conn, String tableName, String columnName, String alterSql) throws SQLException {
+        if (hasColumn(conn, tableName, columnName)) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(alterSql);
+        } catch (SQLException ex) {
+            if (!hasColumn(conn, tableName, columnName)) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String tableName, String columnName) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, tableName, columnName)) {
+            return columns.next();
         }
     }
 

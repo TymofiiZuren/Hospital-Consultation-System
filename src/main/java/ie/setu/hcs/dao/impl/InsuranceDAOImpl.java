@@ -26,7 +26,7 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ensureCardDocumentColumn(conn);
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, insurance.getPatientId());
             pstmt.setString(2, insurance.getProviderName());
@@ -52,14 +52,18 @@ public class InsuranceDAOImpl implements InsuranceDAO {
     @Override
     public Insurance findById(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM insurance WHERE insurance_id = ?";
+        String sql = """
+                SELECT * FROM insurance
+                WHERE insurance_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureCardDocumentColumn(conn);
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -81,19 +85,20 @@ public class InsuranceDAOImpl implements InsuranceDAO {
     @Override
     public DefaultTableModel findAll() throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM insurance";
+        String sql = "SELECT * FROM insurance WHERE COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         // executing the query
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            ensureCardDocumentColumn(conn);
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureOptionalColumns(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
 
-            // returning the model from query
-            return TableModelUtil.buildTableModel(rs);
+                // returning the model from query
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -109,6 +114,7 @@ public class InsuranceDAOImpl implements InsuranceDAO {
                                       expiration_date = ?,
                                       card_document_path = ?
                               WHERE insurance_id = ?
+                                AND COALESCE(delete_flag, FALSE) = FALSE
                 """;
 
         // validate connection
@@ -116,7 +122,7 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureCardDocumentColumn(conn);
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, insurance.getPatientId());
             pstmt.setString(2, insurance.getProviderName());
@@ -135,13 +141,19 @@ public class InsuranceDAOImpl implements InsuranceDAO {
     @Override
     public void delete(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "DELETE FROM insurance WHERE insurance_id = ?";
+        String sql = """
+                UPDATE insurance
+                SET delete_flag = TRUE
+                WHERE insurance_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -154,14 +166,14 @@ public class InsuranceDAOImpl implements InsuranceDAO {
     @Override
     public DefaultTableModel findByPatientId(Integer patientId) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM insurance WHERE patient_id = ?";
+        String sql = "SELECT * FROM insurance WHERE patient_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ensureCardDocumentColumn(conn);
+            ensureOptionalColumns(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, patientId);
@@ -178,14 +190,19 @@ public class InsuranceDAOImpl implements InsuranceDAO {
     @Override
     public void updateStatus(Integer insuranceId, String status) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "UPDATE insurance SET status = ? WHERE insurance_id = ?";
+        String sql = """
+                UPDATE insurance
+                SET status = ?
+                WHERE insurance_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureCardDocumentColumn(conn);
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setString(1, status);
             pstmt.setInt(2, insuranceId);
@@ -240,15 +257,20 @@ public class InsuranceDAOImpl implements InsuranceDAO {
         return insurance;
     }
 
-    private void ensureCardDocumentColumn(Connection conn) throws SQLException {
-        if (hasColumn(conn, "card_document_path")) {
+    private void ensureOptionalColumns(Connection conn) throws SQLException {
+        ensureColumn(conn, "card_document_path", "ALTER TABLE insurance ADD COLUMN card_document_path VARCHAR(500) NULL");
+        ensureColumn(conn, "delete_flag", "ALTER TABLE insurance ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+    }
+
+    private void ensureColumn(Connection conn, String columnName, String alterSql) throws SQLException {
+        if (hasColumn(conn, columnName)) {
             return;
         }
 
         try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE insurance ADD COLUMN card_document_path VARCHAR(500) NULL");
+            stmt.executeUpdate(alterSql);
         } catch (SQLException ex) {
-            if (!hasColumn(conn, "card_document_path")) {
+            if (!hasColumn(conn, columnName)) {
                 throw ex;
             }
         }

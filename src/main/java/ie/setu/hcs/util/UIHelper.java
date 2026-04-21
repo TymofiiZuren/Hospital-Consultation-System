@@ -970,12 +970,10 @@ public final class UIHelper {
     }
 
     public static void showSelectedRowDetails(Component parent, JTable table, String title) throws Exception {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow < 0) {
+        Integer modelRow = selectedModelRow(table);
+        if (modelRow == null) {
             throw new ValidationException("Please select a row first.");
         }
-
-        int modelRow = table.convertRowIndexToModel(selectedRow);
         showRowDetails(parent, table, modelRow, title);
     }
 
@@ -1042,12 +1040,11 @@ public final class UIHelper {
     }
 
     public static Integer selectedId(JTable table, String columnName) {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow < 0) {
+        Integer modelRow = selectedModelRow(table);
+        if (modelRow == null) {
             return null;
         }
 
-        int modelRow = table.convertRowIndexToModel(selectedRow);
         int column = table.getModel() instanceof DefaultTableModel
                 ? ((DefaultTableModel) table.getModel()).findColumn(columnName)
                 : -1;
@@ -1058,6 +1055,30 @@ public final class UIHelper {
 
         Object value = table.getModel().getValueAt(modelRow, column);
         return value == null ? null : Integer.parseInt(value.toString());
+    }
+
+    public static Integer selectedModelRow(JTable table) {
+        if (table == null || table.getModel() == null) {
+            return null;
+        }
+
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow < 0 || selectedRow >= table.getRowCount()) {
+            table.clearSelection();
+            return null;
+        }
+
+        try {
+            int modelRow = table.convertRowIndexToModel(selectedRow);
+            if (modelRow < 0 || modelRow >= table.getModel().getRowCount()) {
+                table.clearSelection();
+                return null;
+            }
+            return modelRow;
+        } catch (RuntimeException ex) {
+            table.clearSelection();
+            return null;
+        }
     }
 
     public static void hideColumns(JTable table, String... columnNames) {
@@ -1208,18 +1229,20 @@ public final class UIHelper {
         }
 
         TableColumnModel columns = table.getColumnModel();
+        TableModel model = table.getModel();
         FontMetrics cellMetrics = table.getFontMetrics(table.getFont());
         FontMetrics headerMetrics = table.getTableHeader().getFontMetrics(table.getTableHeader().getFont());
-        int sampleRows = Math.min(table.getRowCount(), 50);
+        int sampleRows = Math.min(model.getRowCount(), 50);
         int[] baseWidths = new int[table.getColumnCount()];
 
         for (int columnIndex = 0; columnIndex < table.getColumnCount(); columnIndex++) {
             TableColumn column = columns.getColumn(columnIndex);
             Object headerValue = column.getHeaderValue();
             int preferred = headerMetrics.stringWidth(headerValue == null ? "" : headerValue.toString()) + 32;
+            int modelColumnIndex = table.convertColumnIndexToModel(columnIndex);
 
             for (int row = 0; row < sampleRows; row++) {
-                Object value = table.getValueAt(row, columnIndex);
+                Object value = model.getValueAt(row, modelColumnIndex);
                 preferred = Math.max(preferred, cellMetrics.stringWidth(value == null ? "" : value.toString()) + 28);
             }
 

@@ -35,7 +35,9 @@ public class InvoiceService {
                        i.paid_at
                 FROM invoices i
                 LEFT JOIN consultation c ON i.consultation_id = c.consultation_id
+                    AND COALESCE(c.delete_flag, FALSE) = FALSE
                 WHERE i.patient_id = ?
+                  AND COALESCE(i.delete_flag, FALSE) = FALSE
                 ORDER BY i.issued_at DESC
                 """.formatted(consultationDisplaySql());
         return displayInvoices(sql, patient.getPatientId());
@@ -53,8 +55,10 @@ public class InvoiceService {
                        i.paid_at
                 FROM invoices i
                 LEFT JOIN consultation c ON i.consultation_id = c.consultation_id
+                    AND COALESCE(c.delete_flag, FALSE) = FALSE
                 WHERE i.patient_id = ?
                   AND i.invoice_status != 'PAID'
+                  AND COALESCE(i.delete_flag, FALSE) = FALSE
                 ORDER BY i.issued_at DESC
                 """.formatted(consultationDisplaySql());
         return displayInvoices(sql, patient.getPatientId());
@@ -74,11 +78,13 @@ public class InvoiceService {
                 JOIN patients p ON i.patient_id = p.patient_id
                 JOIN accounts a ON p.account_id = a.account_id
                 LEFT JOIN consultation c ON i.consultation_id = c.consultation_id
+                    AND COALESCE(c.delete_flag, FALSE) = FALSE
+                WHERE COALESCE(i.delete_flag, FALSE) = FALSE
                 ORDER BY i.issued_at DESC
                 """.formatted(consultationDisplaySql());
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
+             PreparedStatement ps = prepareInvoiceQuery(conn, sql);
              ResultSet rs = ps.executeQuery()) {
             return TableModelUtil.buildTableModel(rs);
         }
@@ -118,7 +124,7 @@ public class InvoiceService {
 
     private DefaultTableModel displayInvoices(String sql, Integer patientId) throws Exception {
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = prepareInvoiceQuery(conn, sql)) {
             ps.setInt(1, patientId);
             try (ResultSet rs = ps.executeQuery()) {
                 return TableModelUtil.buildTableModel(rs);
@@ -153,5 +159,31 @@ public class InvoiceService {
                     ELSE CONCAT('Consultation #', i.consultation_id, ' | ', c.diagnosis)
                 END
                 """;
+    }
+
+    private PreparedStatement prepareInvoiceQuery(Connection conn, String sql) throws Exception {
+        ensureDeleteFlagColumn(conn, "invoices");
+        ensureDeleteFlagColumn(conn, "consultation");
+        return conn.prepareStatement(sql);
+    }
+
+    private void ensureDeleteFlagColumn(Connection conn, String tableName) throws Exception {
+        if (hasColumn(conn, tableName, "delete_flag")) {
+            return;
+        }
+
+        try (var stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE " + tableName + " ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        } catch (Exception ex) {
+            if (!hasColumn(conn, tableName, "delete_flag")) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String tableName, String columnName) throws Exception {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, tableName, columnName)) {
+            return columns.next();
+        }
     }
 }

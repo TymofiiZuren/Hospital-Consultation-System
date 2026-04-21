@@ -72,7 +72,6 @@ public class DoctorRegistrationService {
                 true,
                 LocalDateTime.now()
         );
-        account.setAdmin(false);
         
         try {
             // getting ids

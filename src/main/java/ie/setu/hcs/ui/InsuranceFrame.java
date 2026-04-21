@@ -181,10 +181,12 @@ public class InsuranceFrame extends JFrame {
 
     private void loadTable() {
         try {
+            table.clearSelection();
             table.setModel(mode == Mode.PATIENT
                     ? service.getInsuranceForPatient(account)
                     : service.getAllInsurance());
             UIHelper.hideColumns(table, "insurance_id");
+            table.clearSelection();
             refreshUpdateState();
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
@@ -308,7 +310,8 @@ public class InsuranceFrame extends JFrame {
     }
 
     private boolean hasPendingSelection() {
-        if (table.getSelectedRow() < 0) {
+        Integer modelRow = UIHelper.selectedModelRow(table);
+        if (modelRow == null) {
             return false;
         }
 
@@ -318,7 +321,6 @@ public class InsuranceFrame extends JFrame {
             return false;
         }
 
-        int modelRow = table.convertRowIndexToModel(table.getSelectedRow());
         Object status = model.getValueAt(modelRow, statusColumn);
         return status != null && InsuranceService.STATUS_PENDING_VERIFICATION.equalsIgnoreCase(status.toString().trim());
     }

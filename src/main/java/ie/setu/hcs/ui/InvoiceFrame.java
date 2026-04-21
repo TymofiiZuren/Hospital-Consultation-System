@@ -224,12 +224,11 @@ public class InvoiceFrame extends JFrame {
     }
 
     private String selectedValue(String columnName) {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow < 0) {
+        Integer modelRow = UIHelper.selectedModelRow(table);
+        if (modelRow == null) {
             return "";
         }
 
-        int modelRow = table.convertRowIndexToModel(selectedRow);
         int column = ((DefaultTableModel) table.getModel()).findColumn(columnName);
         if (column < 0) {
             return "";

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Apr 17, 2026 at 04:11 PM
+-- Generation Time: Apr 21, 2026 at 02:30 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -38,19 +38,22 @@ CREATE TABLE `accounts` (
   `phone` varchar(50) NOT NULL,
   `gender` varchar(20) NOT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `is_admin` tinyint(1) NOT NULL DEFAULT 0
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `accounts`
 --
 
-INSERT INTO `accounts` (`account_id`, `email`, `password_hash`, `role_id`, `first_name`, `last_name`, `ppsn`, `phone`, `gender`, `is_active`, `created_at`, `is_admin`) VALUES
-(9, 'jay@icloud.com', 'c49ea13013272ea0e3e7e9ad1a99035fb50454044d801ba4ddbcf6ca3fb517b4', 2, 'Jay', 'Klepetz', 'lkjdfads', '0873234323', 'Male', 1, '2026-02-21 21:18:57', 0),
-(25, 'lufe@icloud.com', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 1, 'jack', 'lufe', '9218343F', '0878349343', 'Male', 1, '2026-02-22 16:59:56', 0),
-(28, 'kevin@icloud.com', '487891b2988ab53db16fe5c4f0b10df3b3a867b8cf06302d7dd51a3ef0f510e3', 3, 'kevin', 'qe', '2384371A', '0842983423', 'Male', 1, '2026-04-10 17:55:32', 0),
-(30, 'grace@icloud.com', 'a36f9fa98e5b8ddbb27852af79c8b3e0bec32b5e425375ebc064b98270901386', 4, 'grace', 'ivo', '9238742A', '0873234234', 'Male', 1, '2026-04-10 18:08:09', 1);
+INSERT INTO `accounts` (`account_id`, `email`, `password_hash`, `role_id`, `first_name`, `last_name`, `ppsn`, `phone`, `gender`, `is_active`, `created_at`) VALUES
+(9, 'jay@icloud.com', 'c49ea13013272ea0e3e7e9ad1a99035fb50454044d801ba4ddbcf6ca3fb517b4', 2, 'Jay', 'Klepetz', 'lkjdfads', '0873234323', 'Male', 1, '2026-02-21 21:18:57'),
+(25, 'lufe@icloud.com', '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', 1, 'jack', 'lufe', '9218343F', '0878349343', 'Male', 1, '2026-02-22 16:59:56'),
+(28, 'kevin@icloud.com', '487891b2988ab53db16fe5c4f0b10df3b3a867b8cf06302d7dd51a3ef0f510e3', 3, 'kevin', 'qe', '2384371A', '0842983423', 'Male', 1, '2026-04-10 17:55:32'),
+(30, 'grace@icloud.com', 'a36f9fa98e5b8ddbb27852af79c8b3e0bec32b5e425375ebc064b98270901386', 4, 'grace', 'ivo', '9238742A', '0873234234', 'Male', 1, '2026-04-10 18:08:09'),
+(31, 'levi@icloud.com', 'd0e9023ad21931225d5fc9d957e55e335338cd8857372ab9d4cc2c1ee785f729', 2, 'Levi', 'Ross', '3279347A', '0844738423', 'Male', 1, '2026-04-17 18:51:21'),
+(32, 'Paul@icloud.com', '7ea2b416fb49af99057cc2c88347530838567a330cbb36cd3f5bd67e35c0a7a8', 1, 'Paul', 'Mk', '2039847A', '0848342343', 'Male', 1, '2026-04-17 18:53:55'),
+(33, 'kier@icloud.com', 'b51e211fc3138812e22d39c974c289dbb0ed6360a94a1559dfbd802aef7469bf', 1, 'Liam', 'Kier', '2341342A', '0834313423', 'Male', 1, '2026-04-18 16:53:41'),
+(35, 'noer@icloud.com', '76ef7354917a1a944aec848c6f4f782e43ea54e3f36409960ee562cbd46cceeb', 1, 'Emma', 'Noer', '0983274A', '0860283423', 'Female', 1, '2026-04-20 15:07:51');
 
 -- --------------------------------------------------------
 
@@ -86,21 +89,29 @@ CREATE TABLE `appointments` (
   `appointment_datetime` datetime NOT NULL,
   `status` varchar(30) NOT NULL,
   `medical_need` text DEFAULT NULL,
-  `consultation_room` varchar(120) DEFAULT NULL
+  `consultation_room` varchar(120) DEFAULT NULL,
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `appointments`
 --
 
-INSERT INTO `appointments` (`appointment_id`, `patient_id`, `doctor_id`, `appointment_datetime`, `status`, `medical_need`, `consultation_room`) VALUES
-(1, 3, 1, '2026-04-10 09:00:00', 'Completed', NULL, NULL),
-(2, 3, 1, '2026-04-10 09:00:00', 'Pending', NULL, NULL),
-(3, 3, 1, '2026-04-10 10:00:00', 'Pending', 'fe', ''),
-(4, 3, 1, '2026-04-12 12:00:00', 'Pending', 'helrae', ''),
-(5, 3, 1, '2026-04-13 11:00:00', 'Completed', 'fef', NULL),
-(6, 3, 1, '2026-04-13 11:00:00', 'Rejected', 'fef', NULL),
-(7, 3, 1, '2026-04-21 16:00:00', 'Pending', 'Follow-up for Acute upper respiratory infection (common cold)', '123A');
+INSERT INTO `appointments` (`appointment_id`, `patient_id`, `doctor_id`, `appointment_datetime`, `status`, `medical_need`, `consultation_room`, `delete_flag`) VALUES
+(1, 3, 1, '2026-04-10 09:00:00', 'Completed', NULL, NULL, 1),
+(2, 3, 1, '2026-04-10 09:00:00', 'Pending', NULL, NULL, 1),
+(3, 3, 1, '2026-04-10 10:00:00', 'Pending', 'fe', '', 1),
+(4, 3, 1, '2026-04-12 12:00:00', 'Pending', 'helrae', '', 1),
+(5, 3, 1, '2026-04-13 11:00:00', 'Completed', 'fef', NULL, 1),
+(6, 3, 1, '2026-04-13 11:00:00', 'Rejected', 'fef', NULL, 1),
+(7, 3, 1, '2026-04-21 16:20:00', 'Accepted', 'Follow-up for Acute upper respiratory infection (common cold)', '123A', 1),
+(8, 3, 1, '2026-04-17 09:00:00', 'Pending', 'fjfde', '', 1),
+(10, 3, 1, '2026-05-12 14:00:00', 'Completed', 'xanax', '70B', 1),
+(11, 5, 5, '2026-05-12 14:00:00', 'Pending', 'illness, sore throat', '', 1),
+(12, 3, 5, '2026-04-17 09:00:00', 'Pending', 'fef', '', 1),
+(13, 6, 5, '2026-04-20 14:00:00', 'Accepted', 'Keep help', '', 0),
+(14, 3, 1, '2026-04-19 09:00:00', 'Pending', 'f', '', 1),
+(16, 7, 5, '2026-04-20 16:00:00', 'Accepted', 'The knee hurts', '', 0);
 
 -- --------------------------------------------------------
 
@@ -113,16 +124,18 @@ CREATE TABLE `consultation` (
   `appointment_id` int(11) NOT NULL,
   `diagnosis` text NOT NULL,
   `notes` text NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `delete_flag` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `consultation`
 --
 
-INSERT INTO `consultation` (`consultation_id`, `appointment_id`, `diagnosis`, `notes`, `created_at`) VALUES
-(1, 1, 'Acute upper respiratory infection (common cold)w', 'Patient reports sore throat, mild fever (37.8°C), and nasal congestion for 3 days. No history of chronic illness. Advised rest and hydration.', '2026-04-14 12:21:26'),
-(4, 5, 'heriu', '', '2026-04-14 09:18:09');
+INSERT INTO `consultation` (`consultation_id`, `appointment_id`, `diagnosis`, `notes`, `created_at`, `delete_flag`) VALUES
+(1, 1, 'Acute upper respiratory infection (common cold)', 'Patient reports sore throat, mild fever (37.8°C), and nasal congestion for 3 days. No history of chronic illness. Advised rest and hydration.', '2026-04-17 16:54:45', 1),
+(4, 5, 'heriu', '', '2026-04-14 09:18:09', 0),
+(5, 10, 'Acute bronchitis with mild wheezing', 'Patient reports 5-day history of persistent cough, worse at night. Mild chest discomfort and fatigue present. No fever currently. History of seasonal allergies. Lungs show mild wheeze on auscultation. Oxygen saturation normal.', '2026-04-17 18:38:52', 0);
 
 -- --------------------------------------------------------
 
@@ -132,18 +145,20 @@ INSERT INTO `consultation` (`consultation_id`, `appointment_id`, `diagnosis`, `n
 
 CREATE TABLE `departments` (
   `dep_id` int(11) NOT NULL,
-  `name` varchar(40) NOT NULL
+  `name` varchar(40) NOT NULL,
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `departments`
 --
 
-INSERT INTO `departments` (`dep_id`, `name`) VALUES
-(1, 'Cardiology'),
-(2, 'Neurology'),
-(3, 'Hospital Administration'),
-(4, 'General Practice');
+INSERT INTO `departments` (`dep_id`, `name`, `delete_flag`) VALUES
+(1, 'Cardiology', 0),
+(2, 'Neurology', 0),
+(3, 'Hospital Administration', 0),
+(4, 'General Practice', 0),
+(5, 'Surgery', 0);
 
 -- --------------------------------------------------------
 
@@ -154,20 +169,21 @@ INSERT INTO `departments` (`dep_id`, `name`) VALUES
 CREATE TABLE `doctors` (
   `doctor_id` int(11) NOT NULL,
   `account_id` int(11) NOT NULL,
-  `employee_num` varchar(50) DEFAULT NULL,
   `specialization` varchar(100) NOT NULL,
   `license_number` varchar(20) NOT NULL,
   `years_of_experience` int(5) NOT NULL,
   `consultation_fee` int(10) NOT NULL,
-  `dep_id` int(11) NOT NULL
+  `dep_id` int(11) NOT NULL,
+  `employee_num` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `doctors`
 --
 
-INSERT INTO `doctors` (`doctor_id`, `account_id`, `employee_num`, `specialization`, `license_number`, `years_of_experience`, `consultation_fee`, `dep_id`) VALUES
-(1, 9, 'DOC-1001', 'Neurologist', '3928473', 3, 0, 2);
+INSERT INTO `doctors` (`doctor_id`, `account_id`, `specialization`, `license_number`, `years_of_experience`, `consultation_fee`, `dep_id`, `employee_num`) VALUES
+(1, 9, 'Neurologist', '3928473', 3, 0, 2, '0'),
+(5, 31, 'Surgent', '2934719023748', 3, 0, 5, '0');
 
 -- --------------------------------------------------------
 
@@ -182,16 +198,18 @@ CREATE TABLE `insurance` (
   `policy_number` varchar(50) NOT NULL,
   `status` varchar(30) NOT NULL,
   `expiration_date` date NOT NULL,
-  `card_document_path` varchar(512) DEFAULT NULL
+  `card_document_path` varchar(512) DEFAULT NULL,
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `insurance`
 --
 
-INSERT INTO `insurance` (`insurance_id`, `patient_id`, `provider_name`, `policy_number`, `status`, `expiration_date`, `card_document_path`) VALUES
-(3, 3, 'lufe', 'efe', 'Active', '2027-04-12', NULL),
-(4, 3, 'fkewf', 'HS-029837425', 'Pending Verification', '2027-04-13', '/Users/thomas/Documents/ProgrammeSETU/A_C/AssemblyAndC_2025_2026/PRACTICAL_10/PORT.png');
+INSERT INTO `insurance` (`insurance_id`, `patient_id`, `provider_name`, `policy_number`, `status`, `expiration_date`, `card_document_path`, `delete_flag`) VALUES
+(4, 3, 'fkewf', 'HS-029837425', 'Verified', '2027-04-13', '/Users/thomas/Documents/ProgrammeSETU/A_C/AssemblyAndC_2025_2026/PRACTICAL_10/PORT.png', 0),
+(5, 5, '3k', 'HS-392874320', 'Pending Verification', '2027-04-17', '/Users/thomas/Pictures/Pictures/Avatar/wallhaven-1pjw21.jpg', 0),
+(6, 7, 'Dublin 8', 'HS-823741232', 'Verified', '2027-04-20', '/Users/thomas/Pictures/Pictures/Wallpaper/wallpaper (101).jpg', 0);
 
 -- --------------------------------------------------------
 
@@ -206,16 +224,17 @@ CREATE TABLE `invoices` (
   `amount` int(11) NOT NULL,
   `invoice_status` varchar(30) NOT NULL,
   `issued_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `paid_at` timestamp NULL DEFAULT NULL
+  `paid_at` timestamp NULL DEFAULT NULL,
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `invoices`
 --
 
-INSERT INTO `invoices` (`invoice_id`, `patient_id`, `consultation_id`, `amount`, `invoice_status`, `issued_at`, `paid_at`) VALUES
-(1, 3, 1, 50, 'PAID', '2026-04-14 08:52:09', '2026-04-14 08:52:09'),
-(4, 3, 4, 23123, 'PAID', '2026-04-17 10:42:09', '2026-04-17 10:42:09');
+INSERT INTO `invoices` (`invoice_id`, `patient_id`, `consultation_id`, `amount`, `invoice_status`, `issued_at`, `paid_at`, `delete_flag`) VALUES
+(4, 3, 4, 23123, 'PAID', '2026-04-17 18:32:30', '2026-04-17 18:32:30', 0),
+(5, 3, 5, 85, 'UNPAID', '2026-04-17 18:38:52', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -230,16 +249,17 @@ CREATE TABLE `lab_results` (
   `test_type` varchar(40) NOT NULL,
   `result` text NOT NULL,
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `appointment_id` int(11) DEFAULT NULL
+  `appointment_id` int(11) DEFAULT NULL,
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `lab_results`
 --
 
-INSERT INTO `lab_results` (`lab_result_id`, `consultation_id`, `technician_id`, `test_type`, `result`, `uploaded_at`, `appointment_id`) VALUES
-(1, 1, 3, 'werwerwe', 'werwerwerwer', '2026-04-10 18:14:35', NULL),
-(3, 4, 3, 'Kfjew', 'fekwfjwefwe', '2026-04-14 09:18:28', NULL);
+INSERT INTO `lab_results` (`lab_result_id`, `consultation_id`, `technician_id`, `test_type`, `result`, `uploaded_at`, `appointment_id`, `delete_flag`) VALUES
+(1, 1, 3, 'werwerwe', 'werwerwerwer', '2026-04-10 18:14:35', NULL, 1),
+(3, 4, 3, 'Kfjew', 'fekwfjwefwe', '2026-04-14 09:18:28', NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -274,16 +294,18 @@ CREATE TABLE `medical_records` (
   `patient_id` int(11) NOT NULL,
   `consultation_id` int(11) NOT NULL,
   `prescription` text NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `medical_records`
 --
 
-INSERT INTO `medical_records` (`record_id`, `patient_id`, `consultation_id`, `prescription`, `created_at`) VALUES
-(1, 3, 1, 'Paracetamol 500mg – take 1 tablet every 6 hours as needed\nIbuprofen 200mg – take 1 tablet every 8 hours after meals\nSaline nasal spray – use twice daily', '2026-04-14 12:21:26'),
-(4, 3, 4, 'efwef', '2026-04-14 09:18:09');
+INSERT INTO `medical_records` (`record_id`, `patient_id`, `consultation_id`, `prescription`, `created_at`, `delete_flag`) VALUES
+(1, 3, 1, 'Paracetamol 500mg – take 1 tablet every 6 hours as needed\nIbuprofen 200mg – take 1 tablet every 8 hours after meals\nSaline nasal spray – use twice daily', '2026-04-17 16:54:45', 1),
+(4, 3, 4, 'efwef', '2026-04-14 09:18:09', 0),
+(5, 3, 5, '• Amoxicillin 500mg – take 1 capsule 3 times daily for 7 days\n• Salbutamol inhaler – 2 puffs every 6 hours as needed\n• Paracetamol 500mg – 1–2 tablets every 6 hours for pain/fever (max 4g/day)\n• Rest and increase fluid intake', '2026-04-17 18:38:52', 0);
 
 -- --------------------------------------------------------
 
@@ -309,7 +331,11 @@ INSERT INTO `notifications` (`notification_id`, `patient_id`, `title`, `message`
 (2, 3, 'Appointment Rejected', 'Your appointment with Dr. Jay Klepetz on 13 Apr 2026 11:00 is now Rejected.', 1, '2026-04-14 09:48:55'),
 (3, 3, 'Appointment Completed', 'Your appointment with Dr. Jay Klepetz on 13 Apr 2026 11:00 is now Completed.', 1, '2026-04-14 10:14:23'),
 (4, 3, 'Appointment Accepted', 'Your appointment with Dr. Jay Klepetz on 13 Apr 2026 11:00 is now Accepted.', 1, '2026-04-14 10:16:15'),
-(5, 3, 'Follow-up scheduled', 'A follow-up appointment with Dr. Jay Klepetz has been scheduled for 21 Apr 2026 16:00. Reason: Follow-up for Acute upper respiratory infection (common cold).', 1, '2026-04-14 10:41:25');
+(5, 3, 'Follow-up scheduled', 'A follow-up appointment with Dr. Jay Klepetz has been scheduled for 21 Apr 2026 16:00. Reason: Follow-up for Acute upper respiratory infection (common cold).', 1, '2026-04-14 10:41:25'),
+(6, 3, 'Appointment Accepted', 'Your appointment with Dr. Jay Klepetz on 12 May 2026 14:00 is now Accepted.', 1, '2026-04-17 17:36:01'),
+(7, 3, 'Appointment Accepted', 'Your appointment with Dr. Jay Klepetz on 21 Apr 2026 16:00 is now Accepted. Assigned room: 123A.', 1, '2026-04-19 20:14:55'),
+(8, 6, 'Appointment Accepted', 'Your appointment with Dr. Levi Ross on 20 Apr 2026 14:00 is now Accepted.', 1, '2026-04-20 16:06:02'),
+(9, 7, 'Appointment Accepted', 'Your appointment with Dr. Levi Ross on 20 Apr 2026 16:00 is now Accepted.', 1, '2026-04-20 16:11:24');
 
 -- --------------------------------------------------------
 
@@ -332,7 +358,10 @@ CREATE TABLE `patients` (
 --
 
 INSERT INTO `patients` (`patient_id`, `account_id`, `date_of_birth`, `address`, `eircode`, `blood_type`, `medical_record_number`) VALUES
-(3, 25, '2003-11-22', 'Dublin', 'A43 F323', 'B1', '234132413');
+(3, 25, '2003-11-22', 'Dublin', 'A43 F323', 'B1', '234132413'),
+(5, 32, '2003-07-22', 'Dublin 2, At', 'F38 F3F3', 'B1', '23984732'),
+(6, 33, '2002-03-20', 'Waterford', 'F32 B3A8', 'A1', '583512882'),
+(7, 35, '2003-08-05', 'Cork, 1', 'F33 J3L1', 'A2', '177084996');
 
 -- --------------------------------------------------------
 
@@ -471,7 +500,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `administrators`
@@ -483,37 +512,37 @@ ALTER TABLE `administrators`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `consultation`
 --
 ALTER TABLE `consultation`
-  MODIFY `consultation_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `consultation_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `dep_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `dep_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `doctors`
 --
 ALTER TABLE `doctors`
-  MODIFY `doctor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `doctor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `insurance`
 --
 ALTER TABLE `insurance`
-  MODIFY `insurance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `insurance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `invoices`
 --
 ALTER TABLE `invoices`
-  MODIFY `invoice_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `invoice_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `lab_results`
@@ -531,19 +560,19 @@ ALTER TABLE `lab_technicians`
 -- AUTO_INCREMENT for table `medical_records`
 --
 ALTER TABLE `medical_records`
-  MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `roles`

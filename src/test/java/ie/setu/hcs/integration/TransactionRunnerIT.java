@@ -32,7 +32,6 @@ class TransactionRunnerIT extends DatabaseIntegrationSupport {
                         "0870000001",
                         "Other",
                         true,
-                        false,
                         LocalDateTime.now()
                 );
                 accountDAO.save(conn, account);

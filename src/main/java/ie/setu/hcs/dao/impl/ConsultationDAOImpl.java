@@ -26,6 +26,7 @@ public class ConsultationDAOImpl implements ConsultationDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, consultation.getAppointmentId());
             pstmt.setString(2, consultation.getDiagnosis());
@@ -49,13 +50,18 @@ public class ConsultationDAOImpl implements ConsultationDAO {
     @Override
     public Consultation findById(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM consultation WHERE consultation_id = ?";
+        String sql = """
+                SELECT * FROM consultation
+                WHERE consultation_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -77,18 +83,20 @@ public class ConsultationDAOImpl implements ConsultationDAO {
     @Override
     public DefaultTableModel findAll() throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM consultation";
+        String sql = "SELECT * FROM consultation WHERE COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         // executing the query
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureDeleteFlagColumn(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
 
-            // returning the model from query
-            return TableModelUtil.buildTableModel(rs);
+                // returning the model from query
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -102,6 +110,7 @@ public class ConsultationDAOImpl implements ConsultationDAO {
                                         notes = ?,
                                         created_at = ?
                               WHERE consultation_id = ?
+                                AND COALESCE(delete_flag, FALSE) = FALSE
                 """;
 
         // validate connection
@@ -109,6 +118,7 @@ public class ConsultationDAOImpl implements ConsultationDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, consultation.getAppointmentId());
             pstmt.setString(2, consultation.getDiagnosis());
@@ -125,13 +135,19 @@ public class ConsultationDAOImpl implements ConsultationDAO {
     @Override
     public void delete(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "DELETE FROM consultation WHERE consultation_id = ?";
+        String sql = """
+                UPDATE consultation
+                SET delete_flag = TRUE
+                WHERE consultation_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -144,13 +160,18 @@ public class ConsultationDAOImpl implements ConsultationDAO {
     @Override
     public Consultation findByAppointmentId(Integer appointmentId) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM consultation WHERE appointment_id = ?";
+        String sql = """
+                SELECT * FROM consultation
+                WHERE appointment_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, appointmentId);
 
@@ -176,6 +197,8 @@ public class ConsultationDAOImpl implements ConsultationDAO {
                 SELECT c.* FROM consultation c
                 JOIN appointments a ON c.appointment_id = a.appointment_id
                 WHERE a.patient_id = ?
+                  AND COALESCE(c.delete_flag, FALSE) = FALSE
+                  AND COALESCE(a.delete_flag, FALSE) = FALSE
                 """;
 
         // validate connection
@@ -183,6 +206,8 @@ public class ConsultationDAOImpl implements ConsultationDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
+            ensureAppointmentDeleteFlagColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, patientId);
@@ -231,5 +256,35 @@ public class ConsultationDAOImpl implements ConsultationDAO {
 
         // returning the consultation information
         return consultation;
+    }
+
+    private void ensureDeleteFlagColumn(Connection conn) throws SQLException {
+        ensureColumn(conn, "consultation", "delete_flag",
+                "ALTER TABLE consultation ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+    }
+
+    private void ensureAppointmentDeleteFlagColumn(Connection conn) throws SQLException {
+        ensureColumn(conn, "appointments", "delete_flag",
+                "ALTER TABLE appointments ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+    }
+
+    private void ensureColumn(Connection conn, String tableName, String columnName, String alterSql) throws SQLException {
+        if (hasColumn(conn, tableName, columnName)) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(alterSql);
+        } catch (SQLException ex) {
+            if (!hasColumn(conn, tableName, columnName)) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String tableName, String columnName) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, tableName, columnName)) {
+            return columns.next();
+        }
     }
 }

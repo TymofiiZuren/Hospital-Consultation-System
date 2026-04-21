@@ -26,6 +26,7 @@ public class InvoiceDAOImpl implements InvoiceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, invoice.getPatientId());
             pstmt.setInt(2, invoice.getConsultationId());
@@ -51,13 +52,18 @@ public class InvoiceDAOImpl implements InvoiceDAO {
     @Override
     public Invoice findById(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM invoices WHERE invoice_id = ?";
+        String sql = """
+                SELECT * FROM invoices
+                WHERE invoice_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -79,18 +85,20 @@ public class InvoiceDAOImpl implements InvoiceDAO {
     @Override
     public DefaultTableModel findAll() throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM invoices";
+        String sql = "SELECT * FROM invoices WHERE COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         // executing the query
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureDeleteFlagColumn(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
 
-            // returning the model from query
-            return TableModelUtil.buildTableModel(rs);
+                // returning the model from query
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -106,6 +114,7 @@ public class InvoiceDAOImpl implements InvoiceDAO {
                                     issued_at = ?,
                                     paid_at = ?
                               WHERE invoice_id = ?
+                                AND COALESCE(delete_flag, FALSE) = FALSE
                 """;
 
         // validate connection
@@ -113,6 +122,7 @@ public class InvoiceDAOImpl implements InvoiceDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, invoice.getPatientId());
             pstmt.setInt(2, invoice.getConsultationId());
@@ -131,13 +141,19 @@ public class InvoiceDAOImpl implements InvoiceDAO {
     @Override
     public void delete(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "DELETE FROM invoices WHERE invoice_id = ?";
+        String sql = """
+                UPDATE invoices
+                SET delete_flag = TRUE
+                WHERE invoice_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -150,13 +166,14 @@ public class InvoiceDAOImpl implements InvoiceDAO {
     @Override
     public DefaultTableModel findByPatientId(Integer patientId) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM invoices WHERE patient_id = ?";
+        String sql = "SELECT * FROM invoices WHERE patient_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, patientId);
@@ -173,13 +190,14 @@ public class InvoiceDAOImpl implements InvoiceDAO {
     @Override
     public DefaultTableModel findByConsultationId(Integer consultationId) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM invoices WHERE consultation_id = ?";
+        String sql = "SELECT * FROM invoices WHERE consultation_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, consultationId);
@@ -196,13 +214,19 @@ public class InvoiceDAOImpl implements InvoiceDAO {
     @Override
     public void markAsPaid(Integer invoiceId) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "UPDATE invoices SET invoice_status = ?, paid_at = ? WHERE invoice_id = ?";
+        String sql = """
+                UPDATE invoices
+                SET invoice_status = ?, paid_at = ?
+                WHERE invoice_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setString(1, "PAID");
             pstmt.setTimestamp(2, Timestamp.valueOf(java.time.LocalDateTime.now()));
@@ -217,13 +241,19 @@ public class InvoiceDAOImpl implements InvoiceDAO {
     @Override
     public DefaultTableModel findUnpaidByPatientId(Integer patientId) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM invoices WHERE patient_id = ? AND invoice_status != 'PAID'";
+        String sql = """
+                SELECT * FROM invoices
+                WHERE patient_id = ?
+                  AND invoice_status != 'PAID'
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, patientId);
@@ -287,5 +317,25 @@ public class InvoiceDAOImpl implements InvoiceDAO {
 
         // returning the invoice information
         return invoice;
+    }
+
+    private void ensureDeleteFlagColumn(Connection conn) throws SQLException {
+        if (hasColumn(conn, "delete_flag")) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE invoices ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        } catch (SQLException ex) {
+            if (!hasColumn(conn, "delete_flag")) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String columnName) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "invoices", columnName)) {
+            return columns.next();
+        }
     }
 }

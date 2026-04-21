@@ -53,6 +53,7 @@ public class AppointmentService {
                 JOIN doctors d ON ap.doctor_id = d.doctor_id
                 JOIN accounts da ON d.account_id = da.account_id
                 WHERE ap.patient_id = ?
+                  AND COALESCE(ap.delete_flag, FALSE) = FALSE
                 ORDER BY ap.appointment_datetime DESC
                 """;
         return displayAppointments(sql, patient.getPatientId());
@@ -87,6 +88,7 @@ public class AppointmentService {
                 JOIN patients p ON ap.patient_id = p.patient_id
                 JOIN accounts pa ON p.account_id = pa.account_id
                 WHERE ap.doctor_id = ?
+                  AND COALESCE(ap.delete_flag, FALSE) = FALSE
                 ORDER BY ap.appointment_datetime DESC
                 """;
         return displayAppointments(sql, doctor.getDoctorId());
@@ -106,6 +108,7 @@ public class AppointmentService {
                 JOIN accounts pa ON p.account_id = pa.account_id
                 JOIN doctors d ON ap.doctor_id = d.doctor_id
                 JOIN accounts da ON d.account_id = da.account_id
+                WHERE COALESCE(ap.delete_flag, FALSE) = FALSE
                 ORDER BY ap.appointment_datetime DESC
                 """;
 
@@ -134,6 +137,7 @@ public class AppointmentService {
                 JOIN accounts a ON p.account_id = a.account_id
                 JOIN appointments ap ON p.patient_id = ap.patient_id
                 WHERE ap.doctor_id = ?
+                  AND COALESCE(ap.delete_flag, FALSE) = FALSE
                 ORDER BY a.last_name, a.first_name
                 """;
 
@@ -520,6 +524,7 @@ public class AppointmentService {
     private void ensureAppointmentColumns(Connection conn) throws Exception {
         ensureMedicalNeedColumn(conn);
         ensureConsultationRoomColumn(conn);
+        ensureDeleteFlagColumn(conn);
     }
 
     private void ensureMedicalNeedColumn(Connection conn) throws Exception {
@@ -550,6 +555,20 @@ public class AppointmentService {
         }
     }
 
+    private void ensureDeleteFlagColumn(Connection conn) throws Exception {
+        if (hasColumn(conn, "delete_flag")) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE appointments ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        } catch (Exception ex) {
+            if (!hasColumn(conn, "delete_flag")) {
+                throw ex;
+            }
+        }
+    }
+
     private String normalizeRoom(String consultationRoom) {
         return consultationRoom == null ? "" : consultationRoom.trim();
     }
@@ -575,7 +594,7 @@ public class AppointmentService {
 
     private boolean canOverridePendingRestriction(Account actor) {
         return actor != null
-                && (Boolean.TRUE.equals(actor.isAdmin()) || Integer.valueOf(4).equals(actor.getRoleId()));
+                && Integer.valueOf(4).equals(actor.getRoleId());
     }
 
     private boolean hasColumn(Connection conn, String columnName) throws Exception {

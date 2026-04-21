@@ -23,7 +23,6 @@ public class AdminAccountsFrame extends JFrame {
     private final JTextField txtGender = new JTextField();
     private final JTextField txtRole = new JTextField();
     private final JCheckBox chkActive = new JCheckBox("Active");
-    private final JCheckBox chkAdmin = new JCheckBox("Admin");
 
     public AdminAccountsFrame(Account adminAccount) {
         this.adminAccount = adminAccount;
@@ -117,9 +116,7 @@ public class AdminAccountsFrame extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         panel.setOpaque(false);
         chkActive.setOpaque(false);
-        chkAdmin.setOpaque(false);
         panel.add(chkActive);
-        panel.add(chkAdmin);
         return panel;
     }
 
@@ -147,7 +144,6 @@ public class AdminAccountsFrame extends JFrame {
             txtGender.setText(account.getGender() == null ? "" : account.getGender());
             txtRole.setText(roleLabel(account));
             chkActive.setSelected(Boolean.TRUE.equals(account.isActive()));
-            chkAdmin.setSelected(Boolean.TRUE.equals(account.isAdmin()));
         } catch (Exception ex) {
             UIHelper.showError(this, ex);
         }
@@ -163,8 +159,7 @@ public class AdminAccountsFrame extends JFrame {
                     txtPpsn.getText(),
                     txtPhone.getText(),
                     txtGender.getText(),
-                    chkActive.isSelected(),
-                    chkAdmin.isSelected()
+                    chkActive.isSelected()
             );
             loadTable();
             JOptionPane.showMessageDialog(this, "Account updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -183,16 +178,12 @@ public class AdminAccountsFrame extends JFrame {
     }
 
     private String roleLabel(Account account) {
-        String baseRole = switch (account.getRoleId()) {
+        return switch (account.getRoleId()) {
             case 1 -> "Patient";
             case 2 -> "Doctor";
             case 3 -> "Lab Technician";
             case 4 -> "Administrator";
             default -> "Role " + account.getRoleId();
         };
-        if (Boolean.TRUE.equals(account.isAdmin()) && !Integer.valueOf(4).equals(account.getRoleId())) {
-            return baseRole + " (Admin Access)";
-        }
-        return baseRole;
     }
 }

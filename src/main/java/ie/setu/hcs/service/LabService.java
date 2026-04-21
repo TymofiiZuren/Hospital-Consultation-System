@@ -59,6 +59,7 @@ public class LabService {
                 LEFT JOIN lab_technicians t ON lr.technician_id = t.technician_id
                 LEFT JOIN accounts ta ON t.account_id = ta.account_id
                 WHERE a.patient_id = ?
+                  AND COALESCE(lr.delete_flag, FALSE) = FALSE
                 ORDER BY lr.uploaded_at DESC
                 """;
 
@@ -86,6 +87,7 @@ public class LabService {
                 LEFT JOIN consultation c ON lr.consultation_id = c.consultation_id
                 JOIN appointments a ON COALESCE(lr.appointment_id, c.appointment_id) = a.appointment_id
                 WHERE lr.technician_id = ?
+                  AND COALESCE(lr.delete_flag, FALSE) = FALSE
                 ORDER BY lr.uploaded_at DESC
                 """;
 
@@ -119,6 +121,7 @@ public class LabService {
                 LEFT JOIN lab_technicians t ON lr.technician_id = t.technician_id
                 LEFT JOIN accounts ta ON t.account_id = ta.account_id
                 WHERE a.doctor_id = ?
+                  AND COALESCE(lr.delete_flag, FALSE) = FALSE
                 ORDER BY lr.uploaded_at DESC
                 """;
 
@@ -150,6 +153,7 @@ public class LabService {
                 JOIN accounts pa ON p.account_id = pa.account_id
                 LEFT JOIN lab_technicians t ON lr.technician_id = t.technician_id
                 LEFT JOIN accounts ta ON t.account_id = ta.account_id
+                WHERE COALESCE(lr.delete_flag, FALSE) = FALSE
                 ORDER BY lr.uploaded_at DESC
                 """;
 
@@ -258,6 +262,8 @@ public class LabService {
                 JOIN appointments a ON c.appointment_id = a.appointment_id
                 JOIN patients p ON a.patient_id = p.patient_id
                 JOIN accounts pa ON p.account_id = pa.account_id
+                WHERE COALESCE(c.delete_flag, FALSE) = FALSE
+                  AND COALESCE(a.delete_flag, FALSE) = FALSE
                 ORDER BY c.created_at DESC
                 """;
         DefaultTableModel consultations;
@@ -304,6 +310,7 @@ public class LabService {
                 LEFT JOIN consultation c ON c.appointment_id = a.appointment_id
                 WHERE c.consultation_id IS NULL
                   AND LOWER(a.status) NOT IN ('cancelled', 'rejected')
+                  AND COALESCE(a.delete_flag, FALSE) = FALSE
                 ORDER BY a.appointment_datetime DESC
                 """;
         DefaultTableModel appointments;
@@ -415,6 +422,9 @@ public class LabService {
     private void ensureLabSchema(Connection conn) throws SQLException {
         ensureAppointmentIdColumn(conn);
         ensureConsultationIdNullable(conn);
+        ensureDeleteFlagColumn(conn, "lab_results");
+        ensureDeleteFlagColumn(conn, "appointments");
+        ensureDeleteFlagColumn(conn, "consultation");
     }
 
     private void ensureAppointmentIdColumn(Connection conn) throws SQLException {
@@ -454,8 +464,26 @@ public class LabService {
         }
     }
 
+    private void ensureDeleteFlagColumn(Connection conn, String tableName) throws SQLException {
+        if (hasColumn(conn, tableName, "delete_flag")) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE " + tableName + " ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        } catch (SQLException ex) {
+            if (!hasColumn(conn, tableName, "delete_flag")) {
+                throw ex;
+            }
+        }
+    }
+
     private boolean hasColumn(Connection conn, String columnName) throws SQLException {
-        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "lab_results", columnName)) {
+        return hasColumn(conn, "lab_results", columnName);
+    }
+
+    private boolean hasColumn(Connection conn, String tableName, String columnName) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, tableName, columnName)) {
             return columns.next();
         }
     }

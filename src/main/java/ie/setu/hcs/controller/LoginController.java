@@ -41,7 +41,7 @@ public class LoginController {
         }
 
         JFrame dashboard;
-        if (Boolean.TRUE.equals(account.isAdmin()) || Integer.valueOf(4).equals(account.getRoleId())) {
+        if (Integer.valueOf(4).equals(account.getRoleId())) {
             dashboard = new AdminDashboard(account);
         } else {
             dashboard = switch (account.getRoleId()) {

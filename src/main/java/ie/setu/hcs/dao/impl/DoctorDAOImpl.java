@@ -293,20 +293,43 @@ public class DoctorDAOImpl implements DoctorDAO {
     private void ensureEmployeeNumColumn(Connection conn) throws SQLException {
         try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "doctors", "employee_num")) {
             if (columns.next()) {
+                int dataType = columns.getInt("DATA_TYPE");
+                if (dataType == Types.VARCHAR || dataType == Types.CHAR
+                        || dataType == Types.LONGVARCHAR || dataType == Types.NVARCHAR
+                        || dataType == Types.NCHAR || dataType == Types.LONGNVARCHAR) {
+                    return;
+                }
+                alterEmployeeNumColumn(conn);
                 return;
             }
         }
 
+        addEmployeeNumColumn(conn);
+    }
+
+    private void addEmployeeNumColumn(Connection conn) throws SQLException {
         try (PreparedStatement pstmt =
                      conn.prepareStatement("ALTER TABLE doctors ADD COLUMN employee_num VARCHAR(50) NULL AFTER account_id")) {
             pstmt.executeUpdate();
         } catch (SQLException ex) {
             try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "doctors", "employee_num")) {
                 if (columns.next()) {
-                    return;
+                    int dataType = columns.getInt("DATA_TYPE");
+                    if (dataType == Types.VARCHAR || dataType == Types.CHAR
+                            || dataType == Types.LONGVARCHAR || dataType == Types.NVARCHAR
+                            || dataType == Types.NCHAR || dataType == Types.LONGNVARCHAR) {
+                        return;
+                    }
                 }
             }
             throw ex;
+        }
+    }
+
+    private void alterEmployeeNumColumn(Connection conn) throws SQLException {
+        try (PreparedStatement pstmt =
+                     conn.prepareStatement("ALTER TABLE doctors MODIFY COLUMN employee_num VARCHAR(50) NULL")) {
+            pstmt.executeUpdate();
         }
     }
 }

@@ -305,9 +305,8 @@ public class ConsultationFrame extends JFrame {
     }
 
     private Integer selectedAppointmentIdForFollowUp() {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow >= 0) {
-            int row = table.convertRowIndexToModel(selectedRow);
+        Integer row = UIHelper.selectedModelRow(table);
+        if (row != null) {
             return intValue(row, "appointment_id");
         }
 
@@ -339,12 +338,10 @@ public class ConsultationFrame extends JFrame {
     }
 
     private void populateFromSelection() {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow < 0) {
+        Integer row = UIHelper.selectedModelRow(table);
+        if (row == null) {
             return;
         }
-
-        int row = table.convertRowIndexToModel(selectedRow);
         Integer appointmentId = intValue(row, "appointment_id");
         txtDiagnosis.setText(value(row, "diagnosis"));
         txtNotes.setText(value(row, "notes"));

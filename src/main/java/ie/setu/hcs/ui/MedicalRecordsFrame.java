@@ -136,12 +136,10 @@ public class MedicalRecordsFrame extends JFrame {
     }
 
     private void populateFromSelection() {
-        int selectedRow = table.getSelectedRow();
-        if (selectedRow < 0) {
+        Integer row = UIHelper.selectedModelRow(table);
+        if (row == null) {
             return;
         }
-
-        int row = table.convertRowIndexToModel(selectedRow);
         txtDiagnosis.setText(value(row, "diagnosis"));
         if (mode != Mode.PATIENT) {
             txtNotes.setText(value(row, "notes"));
