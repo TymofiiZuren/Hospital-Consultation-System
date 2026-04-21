@@ -52,7 +52,11 @@ public class AppointmentDAOImpl implements AppointmentDAO {
     @Override
     public Appointment findById(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM appointments WHERE appointment_id = ?";
+        String sql = """
+                SELECT * FROM appointments
+                WHERE appointment_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
@@ -81,19 +85,20 @@ public class AppointmentDAOImpl implements AppointmentDAO {
     @Override
     public DefaultTableModel findAll() throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM appointments";
+        String sql = "SELECT * FROM appointments WHERE COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         // executing the query
-        try (Connection conn = DatabaseConfig.getConnection();
-        PreparedStatement pstmt = conn.prepareStatement(sql);
-        ResultSet rs = pstmt.executeQuery()) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
             ensureOptionalColumns(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
 
-            // returning the model from query
-            return TableModelUtil.buildTableModel(rs);
+                // returning the model from query
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -110,6 +115,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
                status
         FROM appointments
         WHERE patient_id = ?
+          AND COALESCE(delete_flag, FALSE) = FALSE
           AND appointment_datetime >= NOW()
           AND status IN ('Pending', 'Accepted')
         ORDER BY appointment_datetime
@@ -145,6 +151,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
                                         medical_need = ?,
                                         consultation_room = ?
                                   WHERE appointment_id = ?
+                                    AND COALESCE(delete_flag, FALSE) = FALSE
                 """;
 
         // validate connection
@@ -171,13 +178,19 @@ public class AppointmentDAOImpl implements AppointmentDAO {
     @Override
     public void delete(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "DELETE FROM appointments WHERE appointment_id = ?";
+        String sql = """
+                UPDATE appointments
+                SET delete_flag = TRUE
+                WHERE appointment_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -193,7 +206,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
 
         // creating sql variable with sql statement
         String sql =
-                "SELECT * FROM appointments WHERE patient_id = ?";
+                "SELECT * FROM appointments WHERE patient_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
@@ -221,7 +234,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
 
         // creating sql variable with sql statement
         String sql =
-                "SELECT * FROM appointments WHERE doctor_id = ?";
+                "SELECT * FROM appointments WHERE doctor_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
@@ -249,7 +262,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
 
         // creating sql variable with sql statement
         String sql =
-                "SELECT * FROM appointments WHERE status = ?";
+                "SELECT * FROM appointments WHERE status = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
@@ -278,7 +291,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
 
         // creating sql variable with sql statement
         String sql =
-                "UPDATE appointments SET status = ? WHERE appointment_id = ?";
+                "UPDATE appointments SET status = ? WHERE appointment_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
@@ -347,6 +360,7 @@ public class AppointmentDAOImpl implements AppointmentDAO {
     private void ensureOptionalColumns(Connection conn) throws SQLException {
         ensureColumn(conn, "medical_need", "ALTER TABLE appointments ADD COLUMN medical_need TEXT NULL");
         ensureColumn(conn, "consultation_room", "ALTER TABLE appointments ADD COLUMN consultation_room VARCHAR(120) NULL");
+        ensureColumn(conn, "delete_flag", "ALTER TABLE appointments ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
     }
 
     private void ensureColumn(Connection conn, String columnName, String alterSql) throws SQLException {

@@ -25,6 +25,7 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, medicalRecord.getPatientId());
             pstmt.setInt(2, medicalRecord.getConsultationId());
@@ -48,13 +49,18 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
     @Override
     public MedicalRecord findById(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM medical_records WHERE record_id = ?";
+        String sql = """
+                SELECT * FROM medical_records
+                WHERE record_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -76,18 +82,20 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
     @Override
     public DefaultTableModel findAll() throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM medical_records";
+        String sql = "SELECT * FROM medical_records WHERE COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         // executing the query
-        try (Connection conn = DatabaseConfig.getConnection();
-        PreparedStatement pstmt = conn.prepareStatement(sql);
-        ResultSet rs = pstmt.executeQuery()) {
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureDeleteFlagColumn(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
 
-            // returning the model from query
-            return TableModelUtil.buildTableModel(rs);
+                // returning the model from query
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -101,6 +109,7 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
                                         prescription = ?,
                                         created_at = ?
                                   WHERE record_id = ?
+                                    AND COALESCE(delete_flag, FALSE) = FALSE
                 """;
 
         // validate connection
@@ -108,6 +117,7 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, medicalRecord.getPatientId());
             pstmt.setInt(2, medicalRecord.getConsultationId());
@@ -124,13 +134,19 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
     @Override
     public void delete(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "DELETE FROM medical_records WHERE record_id = ?";
+        String sql = """
+                UPDATE medical_records
+                SET delete_flag = TRUE
+                WHERE record_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -146,7 +162,7 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
 
         // creating sql variable with sql statement
         String sql =
-                "SELECT * FROM medical_records WHERE patient_id = ?";
+                "SELECT * FROM medical_records WHERE patient_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
@@ -154,6 +170,7 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps =
                      conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, patientId);
@@ -173,7 +190,7 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
 
         // creating sql variable with sql statement
         String sql =
-                "SELECT * FROM medical_records WHERE consultation_id = ?";
+                "SELECT * FROM medical_records WHERE consultation_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
@@ -181,6 +198,7 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps =
                      conn.prepareStatement(sql)) {
+            ensureDeleteFlagColumn(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, consultationId);
@@ -229,5 +247,25 @@ public class MedicalRecordDAOImpl implements MedicalRecordDAO {
 
         // returning the medical record information
         return medicalRecord;
+    }
+
+    private void ensureDeleteFlagColumn(Connection conn) throws SQLException {
+        if (hasColumn(conn, "delete_flag")) {
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("ALTER TABLE medical_records ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+        } catch (SQLException ex) {
+            if (!hasColumn(conn, "delete_flag")) {
+                throw ex;
+            }
+        }
+    }
+
+    private boolean hasColumn(Connection conn, String columnName) throws SQLException {
+        try (ResultSet columns = conn.getMetaData().getColumns(conn.getCatalog(), null, "medical_records", columnName)) {
+            return columns.next();
+        }
     }
 }

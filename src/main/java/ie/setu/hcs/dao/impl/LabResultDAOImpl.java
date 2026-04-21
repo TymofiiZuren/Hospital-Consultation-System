@@ -26,7 +26,7 @@ public class LabResultDAOImpl implements LabResultDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ensureAppointmentIdColumn(conn);
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             if (labResult.getConsultationId() == null) {
                 pstmt.setNull(1, Types.INTEGER);
@@ -60,14 +60,18 @@ public class LabResultDAOImpl implements LabResultDAO {
     @Override
     public LabResult findById(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM lab_results WHERE lab_result_id = ?";
+        String sql = """
+                SELECT * FROM lab_results
+                WHERE lab_result_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureAppointmentIdColumn(conn);
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -89,19 +93,20 @@ public class LabResultDAOImpl implements LabResultDAO {
     @Override
     public DefaultTableModel findAll() throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM lab_results";
+        String sql = "SELECT * FROM lab_results WHERE COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         // executing the query
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            ensureAppointmentIdColumn(conn);
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            ensureOptionalColumns(conn);
+            try (PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
 
-            // returning the model from query
-            return TableModelUtil.buildTableModel(rs);
+                // returning the model from query
+                return TableModelUtil.buildTableModel(rs);
+            }
         }
     }
 
@@ -117,6 +122,7 @@ public class LabResultDAOImpl implements LabResultDAO {
                                        result = ?,
                                        uploaded_at = ?
                               WHERE lab_result_id = ?
+                                AND COALESCE(delete_flag, FALSE) = FALSE
                 """;
 
         // validate connection
@@ -124,7 +130,7 @@ public class LabResultDAOImpl implements LabResultDAO {
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            ensureAppointmentIdColumn(conn);
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             if (labResult.getConsultationId() == null) {
                 pstmt.setNull(1, Types.INTEGER);
@@ -151,13 +157,19 @@ public class LabResultDAOImpl implements LabResultDAO {
     @Override
     public void delete(Integer id) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "DELETE FROM lab_results WHERE lab_result_id = ?";
+        String sql = """
+                UPDATE lab_results
+                SET delete_flag = TRUE
+                WHERE lab_result_id = ?
+                  AND COALESCE(delete_flag, FALSE) = FALSE
+                """;
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            ensureOptionalColumns(conn);
             // inserting arguments into the query statement
             pstmt.setInt(1, id);
 
@@ -170,14 +182,14 @@ public class LabResultDAOImpl implements LabResultDAO {
     @Override
     public DefaultTableModel findByConsultationId(Integer consultationId) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM lab_results WHERE consultation_id = ?";
+        String sql = "SELECT * FROM lab_results WHERE consultation_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ensureAppointmentIdColumn(conn);
+            ensureOptionalColumns(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, consultationId);
@@ -194,14 +206,14 @@ public class LabResultDAOImpl implements LabResultDAO {
     @Override
     public DefaultTableModel findByTechnicianId(Integer technicianId) throws SQLException {
         // creating sql variable with sql statement
-        String sql = "SELECT * FROM lab_results WHERE technician_id = ?";
+        String sql = "SELECT * FROM lab_results WHERE technician_id = ? AND COALESCE(delete_flag, FALSE) = FALSE";
 
         // validate connection
         // setting up connection with database
         // creating PreparedStatement
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ensureAppointmentIdColumn(conn);
+            ensureOptionalColumns(conn);
 
             // inserting arguments into the query statement
             ps.setInt(1, technicianId);
@@ -260,15 +272,20 @@ public class LabResultDAOImpl implements LabResultDAO {
         return labResult;
     }
 
-    private void ensureAppointmentIdColumn(Connection conn) throws SQLException {
-        if (hasColumn(conn, "appointment_id")) {
+    private void ensureOptionalColumns(Connection conn) throws SQLException {
+        ensureColumn(conn, "appointment_id", "ALTER TABLE lab_results ADD COLUMN appointment_id INT NULL");
+        ensureColumn(conn, "delete_flag", "ALTER TABLE lab_results ADD COLUMN delete_flag BOOLEAN NOT NULL DEFAULT FALSE");
+    }
+
+    private void ensureColumn(Connection conn, String columnName, String alterSql) throws SQLException {
+        if (hasColumn(conn, columnName)) {
             return;
         }
 
         try (Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("ALTER TABLE lab_results ADD COLUMN appointment_id INT NULL");
+            stmt.executeUpdate(alterSql);
         } catch (SQLException ex) {
-            if (!hasColumn(conn, "appointment_id")) {
+            if (!hasColumn(conn, columnName)) {
                 throw ex;
             }
         }
