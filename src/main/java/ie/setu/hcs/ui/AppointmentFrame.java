@@ -286,6 +286,7 @@ public class AppointmentFrame extends JFrame {
     private void loadTable() {
         try {
             if (mode == Mode.PATIENT) {
+                clearOtherPatientSelections(null);
                 pendingTable.setModel(service.getPendingAppointmentsForPatient(account));
                 acceptedTable.setModel(service.getAcceptedAppointmentsForPatient(account));
                 cancelledTable.setModel(service.getCancelledAppointmentsForPatient(account));
@@ -296,6 +297,7 @@ public class AppointmentFrame extends JFrame {
                 UIHelper.hideColumns(pastTable, "appointment_id");
                 refreshAvailableSlots(null);
             } else {
+                table.clearSelection();
                 DefaultTableModel model = switch (mode) {
                     case PATIENT -> new DefaultTableModel();
                     case DOCTOR -> service.getAppointmentsForDoctor(account);
@@ -303,6 +305,7 @@ public class AppointmentFrame extends JFrame {
                 };
                 table.setModel(model);
                 UIHelper.hideColumns(table, "appointment_id");
+                table.clearSelection();
                 refreshAdminUpdateState();
             }
         } catch (Exception ex) {
@@ -479,7 +482,8 @@ public class AppointmentFrame extends JFrame {
     }
 
     private boolean hasPendingSelection(JTable sourceTable) {
-        if (sourceTable.getSelectedRow() < 0) {
+        Integer modelRow = UIHelper.selectedModelRow(sourceTable);
+        if (modelRow == null) {
             return false;
         }
 
@@ -489,7 +493,6 @@ public class AppointmentFrame extends JFrame {
             return false;
         }
 
-        int modelRow = sourceTable.convertRowIndexToModel(sourceTable.getSelectedRow());
         Object status = model.getValueAt(modelRow, statusColumn);
         return status != null && AppointmentService.STATUS_PENDING.equalsIgnoreCase(status.toString().trim());
     }
