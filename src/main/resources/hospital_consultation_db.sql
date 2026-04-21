@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Apr 21, 2026 at 02:11 PM
+-- Generation Time: Apr 21, 2026 at 02:30 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -90,7 +90,7 @@ CREATE TABLE `appointments` (
   `status` varchar(30) NOT NULL,
   `medical_need` text DEFAULT NULL,
   `consultation_room` varchar(120) DEFAULT NULL,
-  `delete_flag` int(11) NOT NULL DEFAULT 0
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -125,7 +125,7 @@ CREATE TABLE `consultation` (
   `diagnosis` text NOT NULL,
   `notes` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `delete_flag` int(11) DEFAULT 0
+  `delete_flag` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -146,7 +146,7 @@ INSERT INTO `consultation` (`consultation_id`, `appointment_id`, `diagnosis`, `n
 CREATE TABLE `departments` (
   `dep_id` int(11) NOT NULL,
   `name` varchar(40) NOT NULL,
-  `delete_flag` int(11) NOT NULL DEFAULT 0
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -199,7 +199,7 @@ CREATE TABLE `insurance` (
   `status` varchar(30) NOT NULL,
   `expiration_date` date NOT NULL,
   `card_document_path` varchar(512) DEFAULT NULL,
-  `delete_flag` int(11) NOT NULL DEFAULT 0
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -225,7 +225,7 @@ CREATE TABLE `invoices` (
   `invoice_status` varchar(30) NOT NULL,
   `issued_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `paid_at` timestamp NULL DEFAULT NULL,
-  `delete_flag` int(11) NOT NULL DEFAULT 0
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -250,7 +250,7 @@ CREATE TABLE `lab_results` (
   `result` text NOT NULL,
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `appointment_id` int(11) DEFAULT NULL,
-  `delete_flag` int(11) NOT NULL DEFAULT 0
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -295,7 +295,7 @@ CREATE TABLE `medical_records` (
   `consultation_id` int(11) NOT NULL,
   `prescription` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `delete_flag` int(11) NOT NULL DEFAULT 0
+  `delete_flag` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
